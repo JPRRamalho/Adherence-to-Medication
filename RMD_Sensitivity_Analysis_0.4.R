@@ -1,0 +1,5939 @@
+#' ---
+#' title: "Abem Program | Adhesion to Medication <br> Research Report"
+#' subtitle: "Sensitivity Analysis (0.4)"
+#' author: José Ramalho^[National School of Public Health - UNL, jpr.ramalho@ensp.unl.pt]
+#' date: "`r format(Sys.time(), '%d %B, %Y')`" 
+#' output:
+#'   rmdformats::readthedown:
+#'     use_bookdown: TRUE
+#'     highlight: pygments
+#'     toc_depth: 6
+#'     code_folding: show
+#'     lightbox: TRUE
+#'     gallery: TRUE
+#' ---
+#' 
+## h1 {
+
+##   text-align: center;
+
+## }
+
+#' 
+##     #content{
+
+##         max-width:100%;
+
+##     }
+
+##     /* Adjust html width */
+
+#' 
+## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+#' 
+## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
+# Working Directory Setting
+setwd("C:/Users/Rdirectory")
+
+#' 
+#' # Datasets Import and Merge
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(readr)
+library(janitor)
+library(data.table)
+library(lubridate)
+library(zoo)
+library(dplyr)
+library(tidyr)
+
+# Files need to previously be saved as CSV files
+# Import and special character cleanse 
+BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv", 
+    ";", quote = "\\\"", escape_double = FALSE, 
+    col_types = cols(Cod_Receita = col_character(), 
+        `Valor_ABEM (euros)` = col_double(), 
+        Data_Dispensa = col_date(format = "%d/%m/%Y"), 
+        Benef_Ano_Nascimento = col_date(format = "%Y")), 
+    locale = locale(decimal_mark = ","), 
+    na = "empty", trim_ws = TRUE)
+
+BD_Consumos_abem_2016_2020 <- clean_names(BD_Consumos_abem_2016_2020)
+
+
+BD_Consumos_abem_2021 <- read_delim("C:/Users/Rdirectory/DataFile2.csv", 
+    ";", quote = "\\\"", escape_double = FALSE, 
+    col_types = cols(Data_Dispensa = col_date(format = "%d/%m/%Y"), 
+        Benef_Ano_Nascimento = col_date(format = "%Y")), 
+    locale = locale(decimal_mark = ","), 
+    na = "empty", trim_ws = TRUE)
+
+BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
+
+# Data set merge
+BD_Consumos_abem_2016_2021 <- bind_rows(BD_Consumos_abem_2016_2020,BD_Consumos_abem_2021)
+
+
+BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv", 
+    ";", col_types = cols(`Ano de Nascimento` = col_date(format = "%Y"), 
+        `Data Início` = col_date(format = "%d/%m/%Y"), 
+        `Data Fim` = col_date(format = "%d/%m/%Y"), 
+        `Entidade Referenciadora` = col_skip(), 
+        `Mês Início` = col_skip(), `Ano In` = col_skip(), 
+        `Observações` = col_skip(), `Data Início Atual` = col_skip(), 
+        `Data Fim Atual` = col_skip()), locale = locale(decimal_mark = ","), 
+    comment = "*>", trim_ws = TRUE)
+
+BD_Beneficiarios_abem_2016_2021 <- clean_names(BD_Beneficiarios_abem_2016_2021)
+
+
+Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv", 
+    ";", col_types = cols(`PDDD \n(=DDD OMS/ Dose do medicamento)` = col_double(), 
+        `TTD \n(=quantidade que caracteriza a embalagem / PDDD)` = col_double()), 
+    locale = locale(decimal_mark = ","), 
+    comment = "*>", trim_ws = TRUE)
+
+Lista_Codigos_ATC_DCI <- clean_names(Lista_Codigos_ATC_DCI)
+
+
+NUTS_II <- read_delim("C:/Users/Rdirectory/NUTS II.csv", 
+    ";", quote = "\\\"", escape_backslash = TRUE, 
+    col_types = cols(`regiao` = col_character(), 
+        municipio = col_character()), locale = locale(), 
+    na = "0", comment = "*>", trim_ws = TRUE)
+
+#' 
+#' # Data Wrangling and Data Transformation
+#' ## General
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# New data set for variables: antidepressant usage and mean number of medicines
+BD_Consumos_abem_2016_2021_2 <- BD_Consumos_abem_2016_2021 %>%                  
+  group_by(cod_beneficiario, cod_medicamento, data_dispensa) %>%                 
+  add_count(name = "num_embal_dispensadas") %>% 
+  distinct(cod_beneficiario, cod_medicamento, data_dispensa, num_embal_dispensadas, .keep_all = TRUE) %>% 
+  mutate(total_valor_abem_euros = valor_abem_euros * num_embal_dispensadas,
+    valor_abem_euros = NULL, 
+    qt_embalagens = NULL) 
+
+# Selection of relevant columns
+BD_Consumos_abem_2016_2021 <- BD_Consumos_abem_2016_2021 %>%                     
+  select(1, 2, 3, 5, 8, 9, 19, 10, 11, 12, 13, 14, 15, 22, 34) 
+
+# Remove participation period duplicates
+BD_Beneficiarios_abem_2016_2021 <- BD_Beneficiarios_abem_2016_2021 %>%           
+  distinct(identificacao_codificado, data_fim, .keep_all = TRUE) %>%
+  group_by(identificacao_codificado, data_inicio) %>%
+  filter(row_number() == n())
+
+# Transformation of several same package prescription fulfillment to number of packages dispensed and cost of those packages
+BD_Consumos_abem_2016_2021 <- BD_Consumos_abem_2016_2021 %>%                  
+  group_by(cod_beneficiario, cod_medicamento, data_dispensa) %>%                 
+  add_count(name = "num_embal_dispensadas") %>% 
+  distinct(cod_beneficiario, cod_medicamento, data_dispensa, num_embal_dispensadas, .keep_all = TRUE) %>% 
+  mutate(total_valor_abem_euros = valor_abem_euros * num_embal_dispensadas,
+    valor_abem_euros = NULL, 
+    qt_embalagens = NULL) 
+
+# Variable - Type of family (0 = Lone individual; 1 = Couple without children; 2 = Couple with children; 3 = Single parent family; 4 = Multifamily household)
+BD_Beneficiarios_abem_2016_2021 <- BD_Beneficiarios_abem_2016_2021 %>% 
+  group_by(cod_unico_ref_agregado, data_fim) %>% 
+  mutate(family_type1 = ifelse(any(relacao_familiar == "Requerente"), 1, 0)) %>% 
+  mutate(family_type2 = ifelse(any(relacao_familiar == "Cônjuge"), 1, 0)) %>% 
+  mutate(family_type3 = ifelse(any(relacao_familiar == "Filho(a)"), 1, 0)) %>%
+  mutate(family_type4 = ifelse(any(relacao_familiar == "Pai"), 1, 0)) %>%
+  mutate(family_type5 = ifelse(any(relacao_familiar == "Mãe"), 1, 0)) %>% 
+  unite("fam_type_code",family_type1, family_type2, family_type3, family_type4, family_type5) %>% 
+  mutate(family_type = case_when(
+                                  fam_type_code == "1_0_0_0_0" ~ 0,
+                                  fam_type_code == "1_1_0_0_0" ~ 1,
+                                  fam_type_code == "1_1_1_0_0" ~ 2,
+                                  fam_type_code == "1_0_0_1_1" ~ 2,
+                                  fam_type_code == "1_0_1_0_0" ~ 3,
+                                  fam_type_code == "1_0_0_1_0" ~ 3,
+                                  fam_type_code == "1_0_0_0_1" ~ 3,
+                                  TRUE ~ 4))
+
+#' 
+#' ## Anticoagulants
+## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+# Anticoagulants ATC codes list
+anticoagulant_atc_codes <- c("B01AA03", "B01AA07", "B01AE07", "B01AF01", "B01AF02", "B01AF03")
+
+# New dataFrame of medicine codes corresponding to ATC classification 
+anticoagulants <- filter (Lista_Codigos_ATC_DCI, 
+                         atc %in% anticoagulant_atc_codes)
+
+# New dataFRame of anticoagulant consumption 
+anticoagulants_consumos <- filter(BD_Consumos_abem_2016_2021,
+                                  cod_medicamento %in% anticoagulants$cod_medicamento)
+
+# New dataFrame of participants who took anticoagulants. Variable: Participant sex (Male = 1, Female = 0)
+anticoagulant_patients <- filter(BD_Beneficiarios_abem_2016_2021,
+                                 identificacao_codificado %in%
+                                   anticoagulants_consumos$cod_beneficiario) %>%
+  mutate(genero = ifelse(genero == "Masculino", 1, 0)) 
+
+# Number of days covered by prescription fulfillment, date of end of period covered by prescription 
+anticoagulants_consumos <- anticoagulants_consumos %>% 
+  mutate(num_dias_embalagem = ifelse(cod_medicamento %in% anticoagulants$cod_medicamento, 
+                           anticoagulants$ttd_quantidade_que_caracteriza_a_embalagem_pddd
+                           [cod_medicamento == anticoagulants$cod_medicamento], 0)) %>% 
+  mutate(data_fim_dias_cobertos = (num_dias_embalagem * num_embal_dispensadas) + data_dispensa) %>% 
+  mutate(num_dias_cobertos = num_dias_embalagem * num_embal_dispensadas) %>% 
+  select(cod_receita, 
+         cod_medicamento, 
+         cod_farmacia, 
+         cod_beneficiario, 
+         benef_cod_agregado, 
+         benef_ano_nascimento, 
+         benef_genero, 
+         benef_freguesia, 
+         benef_concelho, 
+         benef_distrito, 
+         n_agregado_familiar, 
+         data_dispensa, 
+         data_fim_dias_cobertos,
+         num_dias_cobertos,
+         generico, 
+         total_valor_abem_euros, 
+         num_embal_dispensadas, 
+         num_dias_embalagem)
+
+# Merge of participation periods overlapping, adjustment of end date for periods ending after study period
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim)))
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+   mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  distinct(identificacao_codificado, data_fim, .keep_all = TRUE) %>% 
+  mutate(data_fim = replace(data_fim, data_fim > "2021-12-31", "2021-12-31"))
+
+# New ATC code variable in consumption dataFrame 
+anticoagulants_consumos <- anticoagulants_consumos %>% 
+  mutate(atc = ifelse(cod_medicamento %in% anticoagulants$cod_medicamento,
+                      anticoagulants$atc[cod_medicamento == anticoagulants$cod_medicamento], 0)) 
+
+# New variable: number of participation period in the program (exclusion of dispensed drugs outside participation periods) 
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(period = 1 + cumsum(ifelse(data_inicio == lag(data_inicio) | is.na(lag(data_inicio)), 0, 1)))
+
+anticoagulant_patients_periods <- anticoagulant_patients %>% 
+  select(identificacao_codificado, data_inicio, data_fim, period)
+
+anticoagulants_consumos <- anticoagulants_consumos %>%  
+  left_join(anticoagulant_patients_periods, 
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim)
+
+# New variable "Switch" of medication (of ATC group) in the same participation period and censoring of observations after 2nd switch (only tolerating 1 switch) 
+anticoagulants_consumos <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
+  filter(switch_atc < 2)
+
+# Censuring observations for participants who discontinued medication (>90 day between two prescriptions or >90 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+anticoagulants_consumos <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 90 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ_sum = cumsum(event_occ)) %>%
+  mutate(event_occ = max(event_occ)) %>% 
+  filter(event_occ_sum < 1)
+
+anticoagulants_consumos_last <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n() & event_occ == 0) %>% 
+  mutate(event_occ = ifelse(data_fim >= 90 + data_fim_dias_cobertos, 1, 0))
+  
+anticoagulants_consumos_top <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() < n() | (row_number()==n() & event_occ == 1)) 
+
+anticoagulants_consumos <- bind_rows(anticoagulants_consumos_top, anticoagulants_consumos_last) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = max(event_occ))
+
+# Period of observation 
+  # From first prescription until last (if remained until study end or left the program) 
+  # From fist prescription until 1.4 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+# participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
+count_observations <- count(anticoagulants_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
+  filter(num_dispensas_per >= 2)
+
+anticoagulant_patients <- inner_join(anticoagulant_patients, count_observations, by = c("identificacao_codificado" = "cod_beneficiario", "period")) 
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(obs_period = ifelse(
+                              first(anticoagulants_consumos$event_occ[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) == 0,
+                              last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) - first(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]),
+                              (last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) + 1.4 * last(anticoagulants_consumos$num_dias_cobertos[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period])) - first(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))) %>% 
+  filter(obs_period >=90) %>%  
+  mutate_at(vars("obs_period"), list(~round(., 0))) 
+
+# CMA numerator
+  # sum of days covered by prescriptions excluding the last one
+  # sum of days covered by prescriptions including the last one (if discontinued medication)
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+    mutate(CMA_num = ifelse(
+      first(anticoagulants_consumos$event_occ[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) == 0, 
+      nth(cumsum(anticoagulants_consumos$num_dias_cobertos[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), -2), 
+      last(cumsum(anticoagulants_consumos$num_dias_cobertos[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period])))) %>% 
+  mutate(CMA_num = ifelse(CMA_num > obs_period, obs_period, CMA_num)) %>% 
+  mutate_at(vars("CMA_num"), list(~round(., 0))) 
+  
+
+# Number of gap days in medication (coefficient = 0.4)
+anticoagulants_consumos <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.4 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.4 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+                                                                                                                  
+# CMG numerator 
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(CMG_num = last(cumsum(anticoagulants_consumos$gap_days[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))) %>% 
+  mutate_at(vars("CMG_num"), list(~round(., 0))) 
+
+# Variable: discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(event_occurrence = first(anticoagulants_consumos$event_occ[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))
+                    
+# Variable: Number of family elements at date of last prescription  
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_famil_elem = last(anticoagulants_consumos$n_agregado_familiar[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))
+
+# Variable: Age group at date of last prescription (<45 = 1; 45-54 = 2; 55-64 = 3; 65-74 = 4; 75-84 = 5; >85 = 6)
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(age_group = case_when(
+                                time_length(difftime(last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), ano_de_nascimento), "years") >= 85 ~ 6,
+                                time_length(difftime(last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), ano_de_nascimento), "years") >= 75 ~ 5,
+                                time_length(difftime(last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), ano_de_nascimento), "years") >= 65 ~ 4,
+                                time_length(difftime(last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), ano_de_nascimento), "years") >= 55 ~ 3,
+                                time_length(difftime(last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]), ano_de_nascimento), "years") >= 45 ~ 2,
+                                TRUE ~ 1))
+
+# Variable: Residence - NUT II (Região Autónoma dos Açores	= 0; Região Autónoma da Madeira	= 1; Norte = 2; Centro = 3; Área Metropolitana de Lisboa = 4; Alentejo = 5; Algarve = 6)
+NUTS_II <- NUTS_II %>% 
+  group_by(regiao) %>% 
+  arrange(.by_group = TRUE)
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(concelho = ifelse(concelho %in% NUTS_II$municipio, 
+                           as.character(NUTS_II$regiao[concelho == NUTS_II$municipio]), 
+                           as.character(concelho))) %>%  
+  mutate(concelho = recode(concelho, 
+                           "Freixo de Espada À Cinta" = "regiao do Norte",
+                           "Mação" = "regiao do Centro")) %>%   
+  mutate(concelho = recode(concelho, 
+                           "acores" = "5", 
+                           "madeira" = "6",
+                           "regiao do Norte" = "0",
+                           "regiao do Centro" = "1",
+                           "regiao de Lisboa" = "2",
+                           "Alentejo" = "3",
+                           "Algarve" = "4"))
+
+# Variable: Usage of generic medication  at date of last prescription (1 = Yes; 0 = No)
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(generic_usage = last(anticoagulants_consumos$generico[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))
+
+# Variable: Pharmacy loyalty (not all prescriptions fulfilled on same pharmacy = 0; all prescriptions fulfilled on same pharmacy = 1)
+anticoagulants_consumos_pharma_loyal <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period, cod_farmacia) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  add_count(name = "num_dispensas_farm") %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(num_dispensas_farm, .by_group = TRUE) 
+  
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = last(anticoagulants_consumos_pharma_loyal$num_dispensas_farm[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period])) %>% 
+  mutate(pharmacy_loyalty = (pharmacy_loyalty / num_dispensas_per)*100)
+
+anticoagulant_patients <- anticoagulant_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = ifelse(pharmacy_loyalty == 100, 1, 0))
+
+
+# Variable: Average amount of financial assistance per week during observation period (€/week)
+BD_Consumos_abem_2016_2021_anticoagulants <- BD_Consumos_abem_2016_2021 %>%     
+  filter(cod_beneficiario %in% anticoagulant_patients$identificacao_codificado) 
+
+BD_Consumos_abem_2016_2021_anticoagulants <- BD_Consumos_abem_2016_2021_anticoagulants %>% 
+    left_join(anticoagulant_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+anticoagulants_consumos_calc <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n())
+  
+BD_Consumos_abem_2016_2021_anticoagulants <- BD_Consumos_abem_2016_2021_anticoagulants %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.4 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+
+anticoagulants_consumos_calc1 <- anticoagulants_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()== 1)
+
+BD_Consumos_abem_2016_2021_anticoagulants <- BD_Consumos_abem_2016_2021_anticoagulants %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= anticoagulants_consumos_calc1$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc1$cod_beneficiario & period == anticoagulants_consumos_calc1$period]) %>% 
+  mutate(sum_gasto_financ = cumsum(total_valor_abem_euros)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(assist_financ_med_sem = BD_Consumos_abem_2016_2021_anticoagulants$sum_gasto_financ[identificacao_codificado == BD_Consumos_abem_2016_2021_anticoagulants$cod_beneficiario & period == BD_Consumos_abem_2016_2021_anticoagulants$period] / (obs_period / 7)) 
+
+# Variable: Average number of different drugs fulfilled by pharmacy visit (if less than 5 drugs = 0; if polypharmacy (>5 and <10) = 1; if excessive polypharmacy (>10) = 2)
+BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% anticoagulant_patients$identificacao_codificado) %>%  
+  left_join(anticoagulant_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_anticoagulants2 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.4 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_anticoagulants2 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= anticoagulants_consumos_calc1$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc1$cod_beneficiario & period == anticoagulants_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_anticoagulants2 %>% 
+  group_by(cod_beneficiario, data_dispensa, period) %>% 
+  distinct(cod_beneficiario, data_dispensa, period, dci,.keep_all = TRUE) %>% 
+  add_count(name = "num_farm_dispensa") %>%  
+  group_by(cod_beneficiario, period, data_dispensa) %>% 
+  filter(row_number() == n()) %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  add_count(name = "num_disp_periodo") %>% 
+  mutate(sum_num_farm_dispensa = cumsum(num_farm_dispensa)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = BD_Consumos_abem_2016_2021_anticoagulants2$sum_num_farm_dispensa[identificacao_codificado == BD_Consumos_abem_2016_2021_anticoagulants2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_anticoagulants2$period] / BD_Consumos_abem_2016_2021_anticoagulants2$num_disp_periodo[identificacao_codificado == BD_Consumos_abem_2016_2021_anticoagulants2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_anticoagulants2$period])
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = case_when(num_med_farm_dispensa < 5 ~ 0,
+                                           num_med_farm_dispensa >= 5 & num_med_farm_dispensa < 10 ~ 1,
+                                           num_med_farm_dispensa >= 10 ~ 2))
+
+# Variable: Consumption of antidepressant drugs at any point of observation period (1 = Yes; 0 = No)
+antidepressant_dci_pt <- c("Imipramina", "Clomipramina", "Trimipramina", "Amitriptilina", "Nortriptilina", "Dosulepina", "Maprotilina", "Fluoxetina", "Citalopram", "Paroxetina", "Sertralina", "Fluvoxamina", "Escitalopram", "Moclobemida", "Oxitriptano", "Mianserina", "Trazodona", "Mirtazapina", "Bupropiom", "Tianeptina", "Venlafaxina", "Milnaciprano", "Reboxetina", "Duloxetina", "Agomelatina", "Desvenlafaxina", "Vortioxetina")
+
+BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% anticoagulant_patients$identificacao_codificado) %>%  
+  left_join(anticoagulant_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_anticoagulants3 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.4 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_anticoagulants3 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= anticoagulants_consumos_calc1$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc1$cod_beneficiario & period == anticoagulants_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_anticoagulants3 %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  mutate(antidepressant = cumsum(ifelse((dci %in% antidepressant_dci_pt), 1, 0))) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+anticoagulant_patients <- anticoagulant_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(antidepressant_use = ifelse(BD_Consumos_abem_2016_2021_anticoagulants3$antidepressant[identificacao_codificado == BD_Consumos_abem_2016_2021_anticoagulants3$cod_beneficiario & period == BD_Consumos_abem_2016_2021_anticoagulants3$period] >= 1, 1, 0))
+
+# CMA Rate - Continuous Multiple Interval Measure of Medication Acquisition (%)
+anticoagulant_patients <- anticoagulant_patients %>% 
+  mutate(CMA = (CMA_num / obs_period) * 100) %>% 
+  mutate(CMA = ifelse(CMA > 100, 100, CMA))
+
+# CMG Rate - Continuous Multiple Interval Measure of Medication Gaps (%)
+anticoagulant_patients <- anticoagulant_patients %>% 
+  mutate(CMG = (CMG_num / obs_period) * 100) %>% 
+  mutate(CMG = ifelse(CMG > 100, 100, CMG))
+
+# Final data set with every variable 
+anticoagulant_patients_final <- anticoagulant_patients %>%  
+  subset(select = -c(ano_de_nascimento, freguesia, distrito, relacao_familiar, n_o_de_processo, cod_ref, cod_unico_ref_agregado, num_dispensas_per, data_inicio, data_fim, period)) %>% 
+  rename(patient_id = identificacao_codificado,
+         gender = genero,
+         nuts_ii = concelho,
+         time_to_event = obs_period,
+         discontinuation = event_occurrence,
+         num_days_CMA = CMA_num,
+         num_days_CMG = CMG_num,
+         numb_fam_members = num_famil_elem,
+         avrg_fin_sup_week = assist_financ_med_sem,
+         avrg_numb_drugs_refill = num_med_farm_dispensa) %>% 
+  select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
+
+# CSV file export
+write.csv2(anticoagulant_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Anticoagulants_final.csv", row.names = FALSE)
+
+#' 
+#' ## Antidiabetics
+## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+# Antidiabetics ATC codes list
+antidiabetic_atc_codes <- c("A10BA02", "A10BB01", "A10BB07", "A10BB09", "A10BB12", "A10BD02", "A10BD05", "A10BD06",
+                            "A10BD07", "A10BD08", "A10BD09", "A10BD10", "A10BD11", "A10BD13", "A10BD15", "A10BD16",
+                            "A10BD19", "A10BD20", "A10BD21", "A10BD23", "A10BF01", "A10BG03", "A10BH01", "A10BH02",
+                            "A10BH03", "A10BH04", "A10BH05", "A10BJ06", "A10BK01", "A10BK02", "A10BK03", "A10BK04",
+                            "A10BX03")
+
+# New dataFrame of medicine codes corresponding to ATC classification 
+antidiabetics <- filter (Lista_Codigos_ATC_DCI, 
+                         atc %in% antidiabetic_atc_codes)
+
+# New dataFRame of antidiabetic consumption
+antidiabetics_consumos <- filter(BD_Consumos_abem_2016_2021,
+                                  cod_medicamento %in% antidiabetics$cod_medicamento)
+
+# New dataFrame of participants who took antidiabetics Variable: Participant sex (Male = 1, Female = 0)
+antidiabetic_patients <- filter(BD_Beneficiarios_abem_2016_2021,
+                                 identificacao_codificado %in%
+                                   antidiabetics_consumos$cod_beneficiario) %>%
+  mutate(genero = ifelse(genero == "Masculino", 1, 0)) 
+
+# Number of days covered by prescription fulfillment; date of end of period covered by prescription 
+antidiabetics_consumos <- antidiabetics_consumos %>% 
+  mutate(num_dias_embalagem = ifelse(cod_medicamento %in% antidiabetics$cod_medicamento, 
+                           antidiabetics$ttd_quantidade_que_caracteriza_a_embalagem_pddd
+                           [cod_medicamento == antidiabetics$cod_medicamento], 0)) %>% 
+  mutate(data_fim_dias_cobertos = (num_dias_embalagem * num_embal_dispensadas) + data_dispensa) %>% 
+  mutate(num_dias_cobertos = num_dias_embalagem * num_embal_dispensadas) %>% 
+  select(cod_receita, 
+         cod_medicamento, 
+         cod_farmacia, 
+         cod_beneficiario, 
+         benef_cod_agregado, 
+         benef_ano_nascimento, 
+         benef_genero, 
+         benef_freguesia, 
+         benef_concelho, 
+         benef_distrito, 
+         n_agregado_familiar, 
+         data_dispensa, 
+         data_fim_dias_cobertos,
+         num_dias_cobertos,
+         generico, 
+         total_valor_abem_euros, 
+         num_embal_dispensadas, 
+         num_dias_embalagem)
+
+# Merge of overlapping participation periods, adjustment of end date for periods ending after study period
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim)))
+antidiabetic_patients <- antidiabetic_patients %>% 
+   mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  distinct(identificacao_codificado, data_fim, .keep_all = TRUE) %>% 
+  mutate(data_fim = replace(data_fim, data_fim > "2021-12-31", "2021-12-31"))
+
+# New ATC code variable in consumption dataFrame
+antidiabetics_consumos <- antidiabetics_consumos %>% 
+  mutate(atc = ifelse(cod_medicamento %in% antidiabetics$cod_medicamento,
+                      antidiabetics$atc[cod_medicamento == antidiabetics$cod_medicamento], 0)) 
+
+# New variable: number of participation period in the program (exclusion of dispensed drugs outside participation periods) 
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(period = 1 + cumsum(ifelse(data_inicio == lag(data_inicio) | is.na(lag(data_inicio)), 0, 1)))
+
+antidiabetic_patients_periods <- antidiabetic_patients %>% 
+  select(identificacao_codificado, data_inicio, data_fim, period)
+
+antidiabetics_consumos <- antidiabetics_consumos %>%  
+  left_join(antidiabetic_patients_periods, 
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim)
+
+# New variable "Switch" of medication (of ATC group) in the same participation period and censoring of observations after 2nd switch (only tolerating 1 switch)
+antidiabetics_consumos <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
+  filter(switch_atc < 2)
+
+# Censuring observations for participants who discontinued medication (>90 day between two prescriptions or >90 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+antidiabetics_consumos <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 90 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ_sum = cumsum(event_occ)) %>%
+  mutate(event_occ = max(event_occ)) %>% 
+  filter(event_occ_sum < 1)
+
+antidiabetics_consumos_last <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n() & event_occ == 0) %>% 
+  mutate(event_occ = ifelse(data_fim >= 90 + data_fim_dias_cobertos, 1, 0))
+  
+antidiabetics_consumos_top <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() < n() | (row_number()==n() & event_occ == 1)) 
+
+antidiabetics_consumos <- bind_rows(antidiabetics_consumos_top, antidiabetics_consumos_last) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = max(event_occ))
+
+# Period of observation 
+  # From first prescription until last (if remained until study end or left the program) 
+  # From fist prescription until 1.4 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+# participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
+count_observations <- count(antidiabetics_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
+  filter(num_dispensas_per >= 2)
+
+antidiabetic_patients <- inner_join(antidiabetic_patients, count_observations, by = c("identificacao_codificado" = "cod_beneficiario", "period")) 
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(obs_period = ifelse(
+                              first(antidiabetics_consumos$event_occ[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) == 0,
+                              last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) - first(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]),
+                              (last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) + 1.4 * last(antidiabetics_consumos$num_dias_cobertos[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period])) - first(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))) %>% 
+  filter(obs_period >=90) %>% 
+  mutate_at(vars("obs_period"), list(~round(., 0))) 
+
+# CMA numerator
+  # sum of days covered by prescriptions excluding the last one
+  # sum of days covered by prescriptions including the last one (if discontinued medication)
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+    mutate(CMA_num = ifelse(
+      first(antidiabetics_consumos$event_occ[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) == 0, 
+      nth(cumsum(antidiabetics_consumos$num_dias_cobertos[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), -2), 
+      last(cumsum(antidiabetics_consumos$num_dias_cobertos[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period])))) %>% 
+  mutate(CMA_num = ifelse(CMA_num > obs_period, obs_period, CMA_num)) %>% 
+  mutate_at(vars("CMA_num"), list(~round(., 0)))
+
+# Number of gap days in medication (coefficient = 0.4)
+antidiabetics_consumos <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.4 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.4 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+                                                                                                                  
+# CMG numerator  
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(CMG_num = last(cumsum(antidiabetics_consumos$gap_days[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))) %>% 
+  mutate_at(vars("CMG_num"), list(~round(., 0))) 
+
+# Variable: discontinuation (Discontinued Medication = 1, Didn't discontinued = 0)
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(event_occurrence = first(antidiabetics_consumos$event_occ[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))
+                    
+# Variable: Number of family elements at date of last prescription  
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_famil_elem = last(antidiabetics_consumos$n_agregado_familiar[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))
+
+# Variable: Age group at date of last prescription (<45 = 1; 45-54 = 2; 55-64 = 3; 65-74 = 4; 75-84 = 5; >85 = 6)
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(age_group = case_when(
+                                time_length(difftime(last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), ano_de_nascimento), "years") >= 85 ~ 6,
+                                time_length(difftime(last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), ano_de_nascimento), "years") >= 75 ~ 5,
+                                time_length(difftime(last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), ano_de_nascimento), "years") >= 65 ~ 4,
+                                time_length(difftime(last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), ano_de_nascimento), "years") >= 55 ~ 3,
+                                time_length(difftime(last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]), ano_de_nascimento), "years") >= 45 ~ 2,
+                                TRUE ~ 1))
+
+# Variable: Residence - NUT II (Região Autónoma dos Açores	= 0; Região Autónoma da Madeira	= 1; Norte = 2; Centro = 3; Área Metropolitana de Lisboa = 4; Alentejo = 5; Algarve = 6)
+NUTS_II <- NUTS_II %>% 
+  group_by(regiao) %>% 
+  arrange(.by_group = TRUE)
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(concelho = ifelse(concelho %in% NUTS_II$municipio, 
+                           as.character(NUTS_II$regiao[concelho == NUTS_II$municipio]), 
+                           as.character(concelho))) %>%  
+  mutate(concelho = recode(concelho, 
+                           "Freixo de Espada À Cinta" = "regiao do Norte",
+                           "Mação" = "regiao do Centro")) %>%   
+  mutate(concelho = recode(concelho, 
+                           "acores" = "5", 
+                           "madeira" = "6",
+                           "regiao do Norte" = "0",
+                           "regiao do Centro" = "1",
+                           "regiao de Lisboa" = "2",
+                           "Alentejo" = "3",
+                           "Algarve" = "4"))
+
+# Variable: Usage of generic medication  at date of last prescription (1 = Yes; 0 = No)
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(generic_usage = last(antidiabetics_consumos$generico[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))
+
+# Variable: Pharmacy loyalty (not all prescriptions fulfilled on same pharmacy = 0; all prescriptions fulfilled on same pharmacy = 1)
+antidiabetics_consumos_pharma_loyal <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period, cod_farmacia) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  add_count(name = "num_dispensas_farm") %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(num_dispensas_farm, .by_group = TRUE) 
+  
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = last(antidiabetics_consumos_pharma_loyal$num_dispensas_farm[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period])) %>% 
+  mutate(pharmacy_loyalty = (pharmacy_loyalty / num_dispensas_per)*100)
+
+antidiabetic_patients <- antidiabetic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = ifelse(pharmacy_loyalty == 100, 1, 0))
+
+# Variable: Average amount of financial assistance per week during observation period (€/week)
+BD_Consumos_abem_2016_2021_antidiabetics <- BD_Consumos_abem_2016_2021 %>%     
+  filter(cod_beneficiario %in% antidiabetic_patients$identificacao_codificado) 
+
+BD_Consumos_abem_2016_2021_antidiabetics <- BD_Consumos_abem_2016_2021_antidiabetics %>% 
+    left_join(antidiabetic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+antidiabetics_consumos_calc <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n())
+  
+BD_Consumos_abem_2016_2021_antidiabetics <- BD_Consumos_abem_2016_2021_antidiabetics %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.4 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+
+antidiabetics_consumos_calc1 <- antidiabetics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()== 1)
+
+BD_Consumos_abem_2016_2021_antidiabetics <- BD_Consumos_abem_2016_2021_antidiabetics %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antidiabetics_consumos_calc1$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc1$cod_beneficiario & period == antidiabetics_consumos_calc1$period]) %>% 
+  mutate(sum_gasto_financ = cumsum(total_valor_abem_euros)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(assist_financ_med_sem = BD_Consumos_abem_2016_2021_antidiabetics$sum_gasto_financ[identificacao_codificado == BD_Consumos_abem_2016_2021_antidiabetics$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antidiabetics$period] / (obs_period / 7)) 
+
+# Variable: Average number of different drugs fulfilled by pharmacy visit (if less than 5 drugs = 0; if polypharmacy (>5 and <10) = 1; if excessive polypharmacy (>10) = 2)
+BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% antidiabetic_patients$identificacao_codificado) %>%  
+  left_join(antidiabetic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_antidiabetics2 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.4 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_antidiabetics2 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antidiabetics_consumos_calc1$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc1$cod_beneficiario & period == antidiabetics_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_antidiabetics2 %>% 
+  group_by(cod_beneficiario, data_dispensa, period) %>% 
+  distinct(cod_beneficiario, data_dispensa, period, dci,.keep_all = TRUE) %>% 
+  add_count(name = "num_farm_dispensa") %>%  
+  group_by(cod_beneficiario, period, data_dispensa) %>% 
+  filter(row_number() == n()) %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  add_count(name = "num_disp_periodo") %>% 
+  mutate(sum_num_farm_dispensa = cumsum(num_farm_dispensa)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = BD_Consumos_abem_2016_2021_antidiabetics2$sum_num_farm_dispensa[identificacao_codificado == BD_Consumos_abem_2016_2021_antidiabetics2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antidiabetics2$period] / BD_Consumos_abem_2016_2021_antidiabetics2$num_disp_periodo[identificacao_codificado == BD_Consumos_abem_2016_2021_antidiabetics2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antidiabetics2$period])
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = case_when(num_med_farm_dispensa < 5 ~ 0,
+                                           num_med_farm_dispensa >= 5 & num_med_farm_dispensa < 10 ~ 1,
+                                           num_med_farm_dispensa >= 10 ~ 2))
+
+# Variable: Consumption of antidepressant drugs at any point of observation period (1 = Yes; 0 = No)
+antidepressant_dci_pt <- c("Imipramina", "Clomipramina", "Trimipramina", "Amitriptilina", "Nortriptilina", "Dosulepina", "Maprotilina", "Fluoxetina", "Citalopram", "Paroxetina", "Sertralina", "Fluvoxamina", "Escitalopram", "Moclobemida", "Oxitriptano", "Mianserina", "Trazodona", "Mirtazapina", "Bupropiom", "Tianeptina", "Venlafaxina", "Milnaciprano", "Reboxetina", "Duloxetina", "Agomelatina", "Desvenlafaxina", "Vortioxetina")
+
+BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% antidiabetic_patients$identificacao_codificado) %>%  
+  left_join(antidiabetic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_antidiabetics3 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.4 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_antidiabetics3 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antidiabetics_consumos_calc1$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc1$cod_beneficiario & period == antidiabetics_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_antidiabetics3 %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  mutate(antidepressant = cumsum(ifelse((dci %in% antidepressant_dci_pt), 1, 0))) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antidiabetic_patients <- antidiabetic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(antidepressant_use = ifelse(BD_Consumos_abem_2016_2021_antidiabetics3$antidepressant[identificacao_codificado == BD_Consumos_abem_2016_2021_antidiabetics3$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antidiabetics3$period] >= 1, 1, 0))
+
+# CMA Rate - Continuous Multiple Interval Measure of Medication Acquisition (%)
+antidiabetic_patients <- antidiabetic_patients %>% 
+  mutate(CMA = (CMA_num / obs_period) * 100) %>% 
+  mutate(CMA = ifelse(CMA > 100, 100, CMA))
+
+# CMG Rate - Continuous Multiple Interval Measure of Medication Gaps (%)
+antidiabetic_patients <- antidiabetic_patients %>% 
+  mutate(CMG = (CMG_num / obs_period) * 100) %>% 
+  mutate(CMG = ifelse(CMG > 100, 100, CMG))
+
+# Final data set with every variable
+antidiabetic_patients_final <- antidiabetic_patients %>%  
+    subset(select = -c(ano_de_nascimento, freguesia, distrito, relacao_familiar, n_o_de_processo, cod_ref, cod_unico_ref_agregado, num_dispensas_per, data_inicio, data_fim, period)) %>% 
+  rename(patient_id = identificacao_codificado,
+         gender = genero,
+         nuts_ii = concelho,
+         time_to_event = obs_period,
+         discontinuation = event_occurrence,
+         num_days_CMA = CMA_num,
+         num_days_CMG = CMG_num,
+         numb_fam_members = num_famil_elem,
+         avrg_fin_sup_week = assist_financ_med_sem,
+         avrg_numb_drugs_refill = num_med_farm_dispensa) %>% 
+  select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
+
+# CSV file export
+write.csv2(antidiabetic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antidiabetics_final.csv", row.names = FALSE)
+
+
+#' 
+#' ## Antihiperlipidemics
+## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+# Antihiperlipidemics ATC codes list
+antihiperlipidemic_atc_codes <- c("C10AA01", "C10AA02", "C10AA03", "C10AA04", "C10AA05", "C10AA07", "C10AA08", "C10AB02", "C10AB04",
+                         "C10AB05", "C10AB08", "C10AC01", "C10AX09", "C10BA02", "C10BA03", "C10BA04", "C10BA05", "C10BA06",
+                         "C10BX03", "C10BX06", "C10BX09", "C10BX10", "C10BX11", "C10BX13")
+
+# New dataFrame of medicine codes corresponding to ATC classification
+antihiperlipidemics <- filter (Lista_Codigos_ATC_DCI, 
+                         atc %in% antihiperlipidemic_atc_codes)
+
+# New dataFRame of antihiperlipidemic consumption 
+antihiperlipidemics_consumos <- filter(BD_Consumos_abem_2016_2021,
+                                  cod_medicamento %in% antihiperlipidemics$cod_medicamento)
+
+# New dataFrame of participants who took anticoagulants. Variable: Participant sex (Male = 1, Female = 0)
+antihiperlipidemic_patients <- filter(BD_Beneficiarios_abem_2016_2021,
+                                 identificacao_codificado %in%
+                                   antihiperlipidemics_consumos$cod_beneficiario) %>%
+  mutate(genero = ifelse(genero == "Masculino", 1, 0)) 
+
+# Number of days covered by prescription fulfillment, date of end of period covered by prescription 
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
+  mutate(num_dias_embalagem = ifelse(cod_medicamento %in% antihiperlipidemics$cod_medicamento, 
+                           antihiperlipidemics$ttd_quantidade_que_caracteriza_a_embalagem_pddd
+                           [cod_medicamento == antihiperlipidemics$cod_medicamento], 0)) %>% 
+  mutate(data_fim_dias_cobertos = (num_dias_embalagem * num_embal_dispensadas) + data_dispensa) %>% 
+  mutate(num_dias_cobertos = num_dias_embalagem * num_embal_dispensadas) %>% 
+  select(cod_receita, 
+         cod_medicamento, 
+         cod_farmacia, 
+         cod_beneficiario, 
+         benef_cod_agregado, 
+         benef_ano_nascimento, 
+         benef_genero, 
+         benef_freguesia, 
+         benef_concelho, 
+         benef_distrito, 
+         n_agregado_familiar, 
+         data_dispensa, 
+         data_fim_dias_cobertos,
+         num_dias_cobertos,
+         generico, 
+         total_valor_abem_euros, 
+         num_embal_dispensadas, 
+         num_dias_embalagem)
+
+# Merge of overlapping participation periods, adjustment of end date for periods ending after study period
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim)))
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+   mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  mutate(data_fim = as.Date(ifelse(data_fim >= lead(data_inicio, n = 1, default = last(data_fim)), 
+                                   lead(data_fim, n = 1, default = last(data_fim)), 
+                                   data_fim))) %>% 
+  distinct(identificacao_codificado, data_fim, .keep_all = TRUE) %>% 
+  mutate(data_fim = replace(data_fim, data_fim > "2021-12-31", "2021-12-31"))
+
+# New ATC code variable in consumption dataFrame
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
+  mutate(atc = ifelse(cod_medicamento %in% antihiperlipidemics$cod_medicamento,
+                      antihiperlipidemics$atc[cod_medicamento == antihiperlipidemics$cod_medicamento], 0)) 
+
+# New variable: number of participation period in the program (exclusion of dispensed drugs outside participation periods) 
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado) %>% 
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(period = 1 + cumsum(ifelse(data_inicio == lag(data_inicio) | is.na(lag(data_inicio)), 0, 1)))
+
+antihiperlipidemic_patients_periods <- antihiperlipidemic_patients %>% 
+  select(identificacao_codificado, data_inicio, data_fim, period)
+
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>%  
+  left_join(antihiperlipidemic_patients_periods, 
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim)
+
+# New variable "Switch" of medication (of ATC group) in the same participation period and censoring of observations after 2nd switch (only tolerating 1 switch)
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
+  filter(switch_atc < 2)
+
+# Censuring observations for participants who discontinued medication (>90 day between two prescriptions or >90 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 90 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ_sum = cumsum(event_occ)) %>%
+  mutate(event_occ = max(event_occ)) %>% 
+  filter(event_occ_sum < 1)
+
+antihiperlipidemics_consumos_last <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n() & event_occ == 0) %>% 
+  mutate(event_occ = ifelse(data_fim >= 90 + data_fim_dias_cobertos, 1, 0))
+  
+antihiperlipidemics_consumos_top <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() < n() | (row_number()==n() & event_occ == 1)) 
+
+antihiperlipidemics_consumos <- bind_rows(antihiperlipidemics_consumos_top, antihiperlipidemics_consumos_last) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(event_occ = max(event_occ))
+
+# Period of observation 
+  # From first prescription until last (if remained until study end or left the program) 
+  # From fist prescription until 1.4 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+# participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
+count_observations <- count(antihiperlipidemics_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
+  filter(num_dispensas_per >= 2)
+
+antihiperlipidemic_patients <- inner_join(antihiperlipidemic_patients, count_observations, by = c("identificacao_codificado" = "cod_beneficiario", "period")) 
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(obs_period = ifelse(
+                              first(antihiperlipidemics_consumos$event_occ[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) == 0,
+                              last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) - first(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]),
+                              (last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) + 1.4 * last(antihiperlipidemics_consumos$num_dias_cobertos[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period])) - first(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))) %>% 
+  filter(obs_period >=90) %>%  
+  mutate_at(vars("obs_period"), list(~round(., 0))) 
+
+# CMA numerator
+  # sum of days covered by prescriptions excluding the last one
+  # sum of days covered by prescriptions including the last one (if discontinued medication)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+    mutate(CMA_num = ifelse(
+      first(antihiperlipidemics_consumos$event_occ[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) == 0, 
+      nth(cumsum(antihiperlipidemics_consumos$num_dias_cobertos[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), -2), 
+      last(cumsum(antihiperlipidemics_consumos$num_dias_cobertos[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period])))) %>% 
+  mutate(CMA_num = ifelse(CMA_num > obs_period, obs_period, CMA_num)) %>% 
+  mutate_at(vars("CMA_num"), list(~round(., 0))) 
+
+# Number of gap days in medication (coefficient = 0.4)
+antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.4 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.4 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+                                                                                                                  
+# CMG numerator  
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(CMG_num = last(cumsum(antihiperlipidemics_consumos$gap_days[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))) %>% 
+  mutate_at(vars("CMG_num"), list(~round(., 0))) 
+
+# Variable: discontinuation (Discontinued Medication = 1, Didn't discontinued = 0)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(event_occurrence = first(antihiperlipidemics_consumos$event_occ[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))
+                    
+# Variable: Number of family elements at date of last prescription  
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_famil_elem = last(antihiperlipidemics_consumos$n_agregado_familiar[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))
+
+# Variable: Age group at date of last prescription (<45 = 1; 45-54 = 2; 55-64 = 3; 65-74 = 4; 75-84 = 5; >85 = 6)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(age_group = case_when(
+                                time_length(difftime(last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), ano_de_nascimento), "years") >= 85 ~ 6,
+                                time_length(difftime(last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), ano_de_nascimento), "years") >= 75 ~ 5,
+                                time_length(difftime(last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), ano_de_nascimento), "years") >= 65 ~ 4,
+                                time_length(difftime(last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), ano_de_nascimento), "years") >= 55 ~ 3,
+                                time_length(difftime(last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]), ano_de_nascimento), "years") >= 45 ~ 2,
+                                TRUE ~ 1))
+
+# Variable: Residence - NUT II (Região Autónoma dos Açores	= 0; Região Autónoma da Madeira	= 1; Norte = 2; Centro = 3; Área Metropolitana de Lisboa = 4; Alentejo = 5; Algarve = 6)
+NUTS_II <- NUTS_II %>% 
+  group_by(regiao) %>% 
+  arrange(.by_group = TRUE)
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(concelho = ifelse(concelho %in% NUTS_II$municipio, 
+                           as.character(NUTS_II$regiao[concelho == NUTS_II$municipio]), 
+                           as.character(concelho))) %>%  
+  mutate(concelho = recode(concelho, 
+                           "Freixo de Espada À Cinta" = "regiao do Norte",
+                           "Mação" = "regiao do Centro")) %>%   
+  mutate(concelho = recode(concelho, 
+                           "acores" = "5", 
+                           "madeira" = "6",
+                           "regiao do Norte" = "0",
+                           "regiao do Centro" = "1",
+                           "regiao de Lisboa" = "2",
+                           "Alentejo" = "3",
+                           "Algarve" = "4"))
+
+# Variable: Usage of generic medication  at date of last prescription (1 = Yes; 0 = No)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(generic_usage = last(antihiperlipidemics_consumos$generico[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))
+
+# Variable: Pharmacy loyalty (not all prescriptions fulfilled on same pharmacy = 0; all prescriptions fulfilled on same pharmacy = 1)
+antihiperlipidemics_consumos_pharma_loyal <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period, cod_farmacia) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  add_count(name = "num_dispensas_farm") %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(num_dispensas_farm, .by_group = TRUE) 
+  
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = last(antihiperlipidemics_consumos_pharma_loyal$num_dispensas_farm[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period])) %>% 
+  mutate(pharmacy_loyalty = (pharmacy_loyalty / num_dispensas_per)*100)
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(pharmacy_loyalty = ifelse(pharmacy_loyalty == 100, 1, 0))
+
+# Variable: Average amount of financial assistance per week during observation period (€/week)
+BD_Consumos_abem_2016_2021_antihiperlipidemics <- BD_Consumos_abem_2016_2021 %>%     
+  filter(cod_beneficiario %in% antihiperlipidemic_patients$identificacao_codificado) 
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics <- BD_Consumos_abem_2016_2021_antihiperlipidemics %>% 
+    left_join(antihiperlipidemic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+antihiperlipidemics_consumos_calc <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()==n())
+  
+BD_Consumos_abem_2016_2021_antihiperlipidemics <- BD_Consumos_abem_2016_2021_antihiperlipidemics %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.4 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+
+antihiperlipidemics_consumos_calc1 <- antihiperlipidemics_consumos %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number()== 1)
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics <- BD_Consumos_abem_2016_2021_antihiperlipidemics %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antihiperlipidemics_consumos_calc1$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc1$cod_beneficiario & period == antihiperlipidemics_consumos_calc1$period]) %>% 
+  mutate(sum_gasto_financ = cumsum(total_valor_abem_euros)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(assist_financ_med_sem = BD_Consumos_abem_2016_2021_antihiperlipidemics$sum_gasto_financ[identificacao_codificado == BD_Consumos_abem_2016_2021_antihiperlipidemics$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antihiperlipidemics$period] / (obs_period / 7)) 
+
+# Variable: Average number of different drugs fulfilled by pharmacy visit (if less than 5 drugs = 0; if polypharmacy (>5 and <10) = 1; if excessive polypharmacy (>10) = 2)
+BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% antihiperlipidemic_patients$identificacao_codificado) %>%  
+  left_join(antihiperlipidemic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_antihiperlipidemics2 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.4 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_antihiperlipidemics2 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antihiperlipidemics_consumos_calc1$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc1$cod_beneficiario & period == antihiperlipidemics_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_antihiperlipidemics2 %>% 
+  group_by(cod_beneficiario, data_dispensa, period) %>% 
+  distinct(cod_beneficiario, data_dispensa, period, dci,.keep_all = TRUE) %>% 
+  add_count(name = "num_farm_dispensa") %>%  
+  group_by(cod_beneficiario, period, data_dispensa) %>% 
+  filter(row_number() == n()) %>% 
+  group_by(cod_beneficiario, period) %>% 
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  add_count(name = "num_disp_periodo") %>% 
+  mutate(sum_num_farm_dispensa = cumsum(num_farm_dispensa)) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = BD_Consumos_abem_2016_2021_antihiperlipidemics2$sum_num_farm_dispensa[identificacao_codificado == BD_Consumos_abem_2016_2021_antihiperlipidemics2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antihiperlipidemics2$period] / BD_Consumos_abem_2016_2021_antihiperlipidemics2$num_disp_periodo[identificacao_codificado == BD_Consumos_abem_2016_2021_antihiperlipidemics2$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antihiperlipidemics2$period])
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(num_med_farm_dispensa = case_when(num_med_farm_dispensa < 5 ~ 0,
+                                           num_med_farm_dispensa >= 5 & num_med_farm_dispensa < 10 ~ 1,
+                                           num_med_farm_dispensa >= 10 ~ 2))
+
+# Variable: Consumption of antidepressant drugs at any point of observation period (1 = Yes; 0 = No)
+antidepressant_dci_pt <- c("Imipramina", "Clomipramina", "Trimipramina", "Amitriptilina", "Nortriptilina", "Dosulepina", "Maprotilina", "Fluoxetina", "Citalopram", "Paroxetina", "Sertralina", "Fluvoxamina", "Escitalopram", "Moclobemida", "Oxitriptano", "Mianserina", "Trazodona", "Mirtazapina", "Bupropiom", "Tianeptina", "Venlafaxina", "Milnaciprano", "Reboxetina", "Duloxetina", "Agomelatina", "Desvenlafaxina", "Vortioxetina")
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_2 %>%     
+  filter(cod_beneficiario %in% antihiperlipidemic_patients$identificacao_codificado) %>%  
+  left_join(antihiperlipidemic_patients %>% 
+                select(identificacao_codificado, data_inicio, data_fim, period, event_occurrence),
+            by = c("cod_beneficiario" = "identificacao_codificado")) %>%
+  filter(data_dispensa >= data_inicio & data_dispensa <= data_fim) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) 
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_antihiperlipidemics3 %>% 
+  mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.4 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_antihiperlipidemics3 %>% 
+  filter(data_dispensa <= data_fim_observ & data_dispensa >= antihiperlipidemics_consumos_calc1$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc1$cod_beneficiario & period == antihiperlipidemics_consumos_calc1$period])
+
+BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_antihiperlipidemics3 %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>%
+  mutate(antidepressant = cumsum(ifelse((dci %in% antidepressant_dci_pt), 1, 0))) %>% 
+  group_by(cod_beneficiario, period) %>%
+  arrange(data_dispensa, .by_group = TRUE) %>% 
+  filter(row_number() == n())
+
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  group_by(identificacao_codificado, period) %>%
+  arrange(data_inicio, .by_group = TRUE) %>% 
+  mutate(antidepressant_use = ifelse(BD_Consumos_abem_2016_2021_antihiperlipidemics3$antidepressant[identificacao_codificado == BD_Consumos_abem_2016_2021_antihiperlipidemics3$cod_beneficiario & period == BD_Consumos_abem_2016_2021_antihiperlipidemics3$period] >= 1, 1, 0))
+
+# CMA Rate - Continuous Multiple Interval Measure of Medication Acquisition (%)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  mutate(CMA = (CMA_num / obs_period) * 100) %>% 
+  mutate(CMA = ifelse(CMA > 100, 100, CMA))
+
+# CMG Rate - Continuous Multiple Interval Measure of Medication Gaps (%)
+antihiperlipidemic_patients <- antihiperlipidemic_patients %>% 
+  mutate(CMG = (CMG_num / obs_period) * 100) %>% 
+  mutate(CMG = ifelse(CMG > 100, 100, CMG))
+
+# Final data set with every variable
+antihiperlipidemic_patients_final <- antihiperlipidemic_patients %>%  
+    subset(select = -c(ano_de_nascimento, freguesia, distrito, relacao_familiar, n_o_de_processo, cod_ref, cod_unico_ref_agregado, num_dispensas_per, data_inicio, data_fim, period)) %>% 
+  rename(patient_id = identificacao_codificado,
+         gender = genero,
+         nuts_ii = concelho,
+         time_to_event = obs_period,
+         discontinuation = event_occurrence,
+         num_days_CMA = CMA_num,
+         num_days_CMG = CMG_num,
+         numb_fam_members = num_famil_elem,
+         avrg_fin_sup_week = assist_financ_med_sem,
+         avrg_numb_drugs_refill = num_med_farm_dispensa) %>% 
+  select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
+
+# CSV file export
+write.csv2(antihiperlipidemic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antihiperlipidemics_final.csv", row.names = FALSE)
+
+#' 
+#' ## Global
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Merge of data sets
+global_patients_final <- bind_rows(anticoagulant_patients_final, antidiabetic_patients_final, antihiperlipidemic_patients_final)
+
+# Average amount of financial assistance per week during observation period (€/week) - Quintiles (used for all drug classes)
+quintiles <- quantile(global_patients_final$avrg_fin_sup_week, probs = seq(0, 1, 1/5))
+
+# Variable transformation for every drug class - Average amount of financial assistance per week - Quintiles (1st quintile = 1; 2nd quintile = 2; 3rd quintile = 3, 4th quintile = 4; 5th quintile = 5)
+anticoagulant_patients_final <- anticoagulant_patients_final %>% 
+  mutate(avrg_fin_sup_week = case_when(avrg_fin_sup_week <= quintiles[2] ~ 1,
+                                       avrg_fin_sup_week <= quintiles[3] ~ 2,
+                                       avrg_fin_sup_week <= quintiles[4] ~ 3,
+                                       avrg_fin_sup_week <= quintiles[5] ~ 4,
+                                       avrg_fin_sup_week <= quintiles[6] ~ 5)) 
+
+antidiabetic_patients_final <- antidiabetic_patients_final %>% 
+  mutate(avrg_fin_sup_week = case_when(avrg_fin_sup_week <= quintiles[2] ~ 1,
+                                       avrg_fin_sup_week <= quintiles[3] ~ 2,
+                                       avrg_fin_sup_week <= quintiles[4] ~ 3,
+                                       avrg_fin_sup_week <= quintiles[5] ~ 4,
+                                       avrg_fin_sup_week <= quintiles[6] ~ 5)) 
+
+antihiperlipidemic_patients_final <- antihiperlipidemic_patients_final %>% 
+  mutate(avrg_fin_sup_week = case_when(avrg_fin_sup_week <= quintiles[2] ~ 1,
+                                       avrg_fin_sup_week <= quintiles[3] ~ 2,
+                                       avrg_fin_sup_week <= quintiles[4] ~ 3,
+                                       avrg_fin_sup_week <= quintiles[5] ~ 4,
+                                       avrg_fin_sup_week <= quintiles[6] ~ 5)) 
+
+
+anticoagulant_patients_final_global <- anticoagulant_patients_final %>% 
+  mutate(drug_class = "anticoagulants")
+
+antidiabetic_patients_final_global <- antidiabetic_patients_final %>% 
+  mutate(drug_class = "antidiabetics")
+
+antihiperlipidemic_patients_final_global <- antihiperlipidemic_patients_final %>% 
+  mutate(drug_class = "antihiperlipidemics")
+
+global_patients_final <- bind_rows(anticoagulant_patients_final_global, antidiabetic_patients_final_global, antihiperlipidemic_patients_final_global)
+
+# CSV file export
+write.csv2(global_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Global_final.csv", row.names = FALSE)
+
+#' 
+#' # Variable Dictionary
+#' 
+#' ## patient_id
+#' Patient ID;
+#' 
+#' ## gender
+#' Sex (Male = 1, Female = 0)
+#' 
+#' ## age_group
+#' Age group at date of last prescription (\<45 = 1; 45-54 = 2; 55-64 = 3; 65-74 = 4; 75-84 = 5; \>85 = 6)
+#' 
+#' ## nuts_ii
+#' Residence - NUT II (Norte = 0; Centro = 1; Área Metropolitana de Lisboa = 2; Alentejo = 3; Algarve = 4; Região Autónoma dos Açores = 5; Região Autónoma da Madeira = 6)
+#' 
+#' ## numb_fam_members
+#' Number of family elements at date of last prescription
+#' 
+#' ## family_type
+#' Type of family (0 = Lone individual; 1 = Couple without children; 2 = Couple with children; 3 = Single parent family; 4 = Multifamily household)
+#' 
+#' ## generic_usage
+#' Usage of generic medication  at date of last prescription (1 = Yes; 0 = No)
+#' 
+#' ## antidepressant_use
+#' Consumption of antidepressant drugs at any point of observation period (1 = Yes; 0 = No)
+#' 
+#' ## pharmacy_loyalty
+#' Prescriptions fulfilled on the same pharmacy (<100% prescriptions fulfilled on same pharmacy = 0; 100% prescriptions filled on same pharmacy = 1)
+#' 
+#' ## avrg_fin_sup_week
+#' Average amount of financial assistance per week during observation period (€/week) - Quintiles (1st quintile = 1; 2nd quintile = 2; 3rd quintile = 3, 4th quintile = 4; 5th quintile = 5)
+#' 
+#' ## avrg_numb_drugs_refill
+#' Average number of different drugs fulfilled by pharmacy visit (less than 5 drugs = 0; polypharmacy (>=5 and <10) = 1; excessive polypharmacy (>=10) = 2)
+#' 
+#' ## num_days_CMA
+#' Number of days covered by medication fulfilled (CMA numerator)
+#' 
+#' ## CMA
+#' CMA Rate - Continuous Multiple Interval Measure of Medication Acquisition (%)
+#' 
+#' ## num_days_CMG
+#' Number of days with medication gaps (CMG numerator)
+#' 
+#' ## CMG
+#' CMG Rate - Continuous Multiple Interval Measure of Medication Gaps (%)
+#' 
+#' ## discontinuation
+#' Discontinuation of analysed medication (1 = Yes; 0 = No)
+#' 
+#' ## time_to_event
+#' Period of observation - from first prescription to end of program/study or discontinuation of analysed medication (days)
+#' 
+#' ## drug_class
+#' Drug class analysed in observation period (anticoagulants; antidiabetics; antihiperlipidemics)
+#' 
+#' # Statistical Analysis
+#' ## Anticoagulants
+#' ### Frequency Tables, Mean, Median, SD
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+library(knitr)
+library(papeR)
+library(kableExtra)
+
+kable(summarize(anticoagulant_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), 
+      caption = "<b>Continuous Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+
+cols <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+anticoagulant_patients_final[cols] <- lapply(anticoagulant_patients_final[cols], factor)
+                      
+kable(summarize(anticoagulant_patients_final, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), 
+      caption = "<b>Categorical Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' ### CMA and CMG Boxplot and Histograms
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(reshape2)
+library(ggplot2)
+
+boxplot_data_anticoagulants <- data.frame(anticoagulant_patients_final$CMA, anticoagulant_patients_final$CMG)
+
+boxplot1 <- ggplot(data = stack(boxplot_data_anticoagulants), aes(x = ind, y = values)) +
+  stat_boxplot(geom = "errorbar", 
+                    width = 0.2) +
+       geom_boxplot(fill = "#9B2042", colour = "#1F3552", 
+                    alpha = 1, outlier.colour = "red") +
+       scale_y_continuous(name = "%") +  
+       scale_x_discrete(name = "Measure", labels=c("CMA","CMG")) +      
+       ggtitle("Anticoagulants") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+boxplot1
+
+histograma1 <- ggplot(boxplot_data_anticoagulants, aes(x=anticoagulant_patients_final.CMA))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMA Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma1
+
+histograma2 <- ggplot(boxplot_data_anticoagulants, aes(x=anticoagulant_patients_final.CMG))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMG", y = "Number",
+       title = "CMG Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma2
+
+#' 
+#' ### Normality tests (Shapiro-Wilk Test of Normality and Kolmogorov-Smirnov Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(broom)
+Shapiro_Wilk_CMA <- shapiro.test(anticoagulant_patients_final$CMA)
+Kolmogorov_Smirnov_CMA <- ks.test(anticoagulant_patients_final$CMA, "pnorm")
+Shapiro_Wilk_CMG <- shapiro.test(anticoagulant_patients_final$CMG)
+Kolmogorov_Smirnov_CMG <- ks.test(anticoagulant_patients_final$CMG, "pnorm")
+
+kable(tidy(Shapiro_Wilk_CMA), caption = "<b>CMA Shapiro-Wilk Test of Normality</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMA), caption = "<b>CMA Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Shapiro_Wilk_CMG), caption = "<b>CMG Shapiro-Wilk Test of Normality", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMG), caption = "<b>CMG Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' 
+#' ### Bivariate Analysis
+#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(PerformanceAnalytics)
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' In the anticoagulant drug class there are no generic drugs so this variable was not analysed.
+#' 
+#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMG/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMA/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMG/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMA/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMG/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMA/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMG/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+#' 
+#' ### Generalized Linear Mixed Effects Model CMA and CMG
+#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(lme4)
+library(broom.mixed)
+
+mean_CMA_anticoagulants_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = anticoagulant_patients_final) 
+kable(tidy(mean_CMA_anticoagulants_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Anticoagulants</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+mean_CMG_anticoagulants_random <- lme4::lmer(CMG ~ 1 + (1 | patient_id), data = anticoagulant_patients_final) 
+kable(tidy(mean_CMG_anticoagulants_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Anticoagulants</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' 
+#' #### Equidispersion Test
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(AER)
+
+kable(c(mean(anticoagulant_patients_final$num_days_CMA), var(anticoagulant_patients_final$num_days_CMA)),
+      caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMA ~ 1, data = anticoagulant_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMA - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+kable(c(mean(anticoagulant_patients_final$num_days_CMG), var(anticoagulant_patients_final$num_days_CMG)),
+      caption = "<b>CMG - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = anticoagulant_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+#' 
+#' #### Multi-Collinearity Test
+## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+library(performance)
+library(glmtoolbox)
+
+kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = anticoagulant_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = anticoagulant_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' In the anticoagulant drug class there are no generic drugs so this variable was not analysed.
+#' 
+#' #### GLME Models
+#' ##### Outlier Removal
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+quartiles <- quantile(anticoagulant_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(anticoagulant_patients_final$CMA)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+anticoagulant_patients_final_no_outliers_CMA <- filter(anticoagulant_patients_final, CMA > Lower & CMA < Upper)
+
+# CMG
+quartiles <- quantile(anticoagulant_patients_final$CMG, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(anticoagulant_patients_final$CMG)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+anticoagulant_patients_final_no_outliers_CMG <- filter(anticoagulant_patients_final, CMG > Lower & CMG < Upper)
+
+#' 
+#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+kable(summarize(anticoagulant_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), 
+      caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+
+cols <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+anticoagulant_patients_final_no_outliers_CMA[cols] <- lapply(anticoagulant_patients_final_no_outliers_CMA[cols], factor)
+                      
+kable(summarize(anticoagulant_patients_final_no_outliers_CMA, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), 
+      caption = "<b>Categorical Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+# CMG
+kable(summarize(anticoagulant_patients_final_no_outliers_CMG, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), 
+      caption = "<b>Continuous Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+
+cols <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+anticoagulant_patients_final_no_outliers_CMG[cols] <- lapply(anticoagulant_patients_final_no_outliers_CMG[cols], factor)
+                      
+kable(summarize(anticoagulant_patients_final_no_outliers_CMG, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), 
+      caption = "<b>Categorical Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' 
+#' ##### Univariable Models
+#' ###### CMA
+#' Negative Binomial regression used due to data overdispersion.
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(glmmTMB)
+library(gtsummary)
+
+theme_gtsummary_journal(journal = "jama")
+theme_gtsummary_compact()
+
+# Univariable Models
+# CMA 
+mixed_model_CMA_anticoagulants_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ2 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ3 <- glmmTMB(num_days_CMA ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ4 <- glmmTMB(num_days_CMA ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ5 <- glmmTMB(num_days_CMA ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ6 <- glmmTMB(num_days_CMA ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ7 <- glmmTMB(num_days_CMA ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants_univ8 <- glmmTMB(num_days_CMA ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+# Tables
+mixed_model_CMA_anticoagulants_univ1_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ2_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ3_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ4_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ5_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ6_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ7_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ8_table <- tbl_regression(mixed_model_CMA_anticoagulants_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMA_anticoagulants_univ1_table,
+    mixed_model_CMA_anticoagulants_univ2_table,
+    mixed_model_CMA_anticoagulants_univ3_table,
+    mixed_model_CMA_anticoagulants_univ4_table,
+    mixed_model_CMA_anticoagulants_univ5_table,
+    mixed_model_CMA_anticoagulants_univ6_table,
+    mixed_model_CMA_anticoagulants_univ7_table,
+    mixed_model_CMA_anticoagulants_univ8_table))
+mixed_model_CMA_anticoagulants_univ_final_table
+
+#' 
+#' ###### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMG
+mixed_model_CMG_anticoagulants_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ2 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ3 <- glmmTMB(num_days_CMG ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ4 <- glmmTMB(num_days_CMG ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ5 <- glmmTMB(num_days_CMG ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ6 <- glmmTMB(num_days_CMG ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ7 <- glmmTMB(num_days_CMG ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+mixed_model_CMG_anticoagulants_zeroi_univ8 <- glmmTMB(num_days_CMG ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+# Tables
+mixed_model_CMG_anticoagulants_zeroi_univ1_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ2_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ3_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ4_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ5_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ6_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ7_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ8_table <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMG_anticoagulants_zeroi_univ1_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ2_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ3_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ4_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ5_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ6_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ7_table,
+    mixed_model_CMG_anticoagulants_zeroi_univ8_table))
+mixed_model_CMG_anticoagulants_zeroi_univ_final_table
+
+#' 
+#' 
+#' ##### Multivariable Models
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models
+# CMA
+mixed_model_CMA_anticoagulants <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants2 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_anticoagulants3 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+summary(mixed_model_CMA_anticoagulants3)
+
+kable(tidy(mixed_model_CMA_anticoagulants3, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMA - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinm2 (quadratic parameterization).",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+# CMG
+mixed_model_CMG_anticoagulants <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMG, 
+                                          family = nbinom2(link = "log"))
+
+kable(capture.output(check_zeroinflation(mixed_model_CMG_anticoagulants, tolerance = 0.05)),
+      caption = "<b>Zero Inflation Test", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  footnote(general = " Ratio < (1 - 0.05) means that the model is underfitting zeros and probably there is zero-inflation.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+anticoagulant_patients_final_no_outliers_CMG_zi <- anticoagulant_patients_final_no_outliers_CMG %>% 
+  dplyr::mutate(zero_days = ifelse(num_days_CMG == 0, 1, 0))
+
+mixed_model_anticoagulants_log_zi <- glmmTMB(zero_days ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = anticoagulant_patients_final_no_outliers_CMG_zi, 
+                                          family = binomial(link="logit"))
+
+kable(tidy(mixed_model_anticoagulants_log_zi, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>Mixed Effects Logistic Regression for Zero Inflated Model Variable Selection</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Mixed effects logistic regression employed to identify variables that predict zero days count (CMG) in order to be used in the zero inflated model. Selected variables had p-value < 0.05.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+mixed_model_CMG_anticoagulants_zeroi <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_anticoagulants_zeroi1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_anticoagulants_zeroi2 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = anticoagulant_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+summary(mixed_model_CMG_anticoagulants_zeroi2)
+
+kable(tidy(mixed_model_CMG_anticoagulants_zeroi2, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMG - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom2 (quadratic parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom1 (linear parameterization). Zero inflated model used.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))     
+
+#' 
+#' #### GLME Models Testing
+#' ##### CMA
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(DHARMa)
+
+#CMA
+simulateResiduals(fittedModel =  mixed_model_CMA_anticoagulants3, integerResponse = TRUE, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_anticoagulants3), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_anticoagulants3), alternative = c("two.sided"), plot = F)
+
+#' 
+#' ##### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMG
+simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_zeroi2, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_zeroi2), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_zeroi2), alternative = c("two.sided"), plot = F)
+
+#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
+#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
+#' 
+#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
+#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
+#' 
+#' ## Antidiabetics
+#' ### Frequency Tables, Mean, Median, SD
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+kable(summarize(antidiabetic_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols1 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antidiabetic_patients_final[cols1] <- lapply(antidiabetic_patients_final[cols1], factor)
+
+kable(summarize(antidiabetic_patients_final, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' ### CMA and CMG Boxplot and Histograms
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(reshape2)
+library(ggplot2)
+
+boxplot_data_antidiabetics <- data.frame(antidiabetic_patients_final$CMA, antidiabetic_patients_final$CMG)
+
+boxplot2 <- ggplot(data = stack(boxplot_data_antidiabetics), aes(x = ind, y = values)) +
+  stat_boxplot(geom = "errorbar", 
+                    width = 0.2) +
+       geom_boxplot(fill = "#9B2042", colour = "#1F3552", 
+                    alpha = 1, outlier.colour = "red") +
+       scale_y_continuous(name = "%") +  
+       scale_x_discrete(name = "Measure", labels=c("CMA","CMG")) +      
+       ggtitle("Antidiabetics") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+boxplot2
+
+histograma3 <- ggplot(boxplot_data_antidiabetics, aes(x=antidiabetic_patients_final.CMA))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMA Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma3
+
+histograma4 <- ggplot(boxplot_data_antidiabetics, aes(x=antidiabetic_patients_final.CMG))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMG Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma4
+
+#' 
+#' ### Normality tests (Shapiro-Wilk Test of Normality and Kolmogorov-Smirnov Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Shapiro_Wilk_CMA1 <- shapiro.test(antidiabetic_patients_final$CMA)
+Shapiro_Wilk_CMG1 <- shapiro.test(antidiabetic_patients_final$CMG)
+Kolmogorov_Smirnov_CMA1 <- ks.test(antidiabetic_patients_final$CMA, "pnorm")
+Kolmogorov_Smirnov_CMG1 <- ks.test(antidiabetic_patients_final$CMG, "pnorm")
+
+kable(tidy(Shapiro_Wilk_CMA1), caption = "<b>CMA Shapiro-Wilk Test of Normality</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMA1), caption = "<b>CMA Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Shapiro_Wilk_CMG1), caption = "<b>CMG Shapiro-Wilk Test of Normality", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMG1), caption = "<b>CMG Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' 
+#' ### Bivariate Analysis
+#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Generic Usage</b>", format = 'html') %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Generic Usage</b>", format = 'html') %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Antidepressant Ussage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMG/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMA/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMG/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMA/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMG/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMA/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMG/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+#' 
+#' 
+#' ### Generalized Linear Mixed Effects Model CMA and CMG
+#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+mean_CMA_antidiabetic_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = antidiabetic_patients_final) 
+kable(tidy(mean_CMA_antidiabetic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Antidiabetics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+mean_CMG_antidiabetic_random <- lme4::lmer(CMG ~ 1 + (1 | patient_id), data = antidiabetic_patients_final) 
+kable(tidy(mean_CMG_antidiabetic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Antidiabetics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Equidispersion Test
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(c(mean(antidiabetic_patients_final$num_days_CMA), var(antidiabetic_patients_final$num_days_CMA)),
+      caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMA ~ 1, data = antidiabetic_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMA - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+kable(c(mean(antidiabetic_patients_final$num_days_CMG), var(antidiabetic_patients_final$num_days_CMG)),
+      caption = "<b>CMG - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = antidiabetic_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+#' 
+#' #### Multi-Collinearity Test
+## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = antidiabetic_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = antidiabetic_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' 
+#' #### GLME Models
+#' ##### Outlier Removal
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+quartiles <- quantile(antidiabetic_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(antidiabetic_patients_final$CMA)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+antidiabetic_patients_final_no_outliers_CMA <- filter(antidiabetic_patients_final, CMA > Lower & CMA < Upper)
+
+# CMG
+quartiles <- quantile(antidiabetic_patients_final$CMG, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(antidiabetic_patients_final$CMG)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+antidiabetic_patients_final_no_outliers_CMG <- filter(antidiabetic_patients_final, CMG > Lower & CMG < Upper)
+
+#' 
+#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+kable(summarize(antidiabetic_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols1 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antidiabetic_patients_final_no_outliers_CMA[cols1] <- lapply(antidiabetic_patients_final_no_outliers_CMA[cols1], factor)
+
+kable(summarize(antidiabetic_patients_final_no_outliers_CMA, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+# CMG
+kable(summarize(antidiabetic_patients_final_no_outliers_CMG, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols1 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antidiabetic_patients_final_no_outliers_CMG[cols1] <- lapply(antidiabetic_patients_final_no_outliers_CMG[cols1], factor)
+
+kable(summarize(antidiabetic_patients_final_no_outliers_CMG, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' ##### Univariable Models
+#' ###### CMA
+#' Negative Binomial regression used due to data overdispersion.
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Univariable Models
+# CMA
+mixed_model_CMA_antidiabetics_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ2 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ3 <- glmmTMB(num_days_CMA ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ4 <- glmmTMB(num_days_CMA ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ5 <- glmmTMB(num_days_CMA ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ6 <- glmmTMB(num_days_CMA ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ7 <- glmmTMB(num_days_CMA ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ8 <- glmmTMB(num_days_CMA ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics_univ9 <- glmmTMB(num_days_CMA ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+# Tables
+mixed_model_CMA_antidiabetics_univ1_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ2_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ3_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ4_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ5_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ6_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ7_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ8_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ9_table <- tbl_regression(mixed_model_CMA_antidiabetics_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMA_antidiabetics_univ1_table,
+    mixed_model_CMA_antidiabetics_univ2_table,
+    mixed_model_CMA_antidiabetics_univ3_table,
+    mixed_model_CMA_antidiabetics_univ4_table,
+    mixed_model_CMA_antidiabetics_univ5_table,
+    mixed_model_CMA_antidiabetics_univ6_table,
+    mixed_model_CMA_antidiabetics_univ7_table,
+    mixed_model_CMA_antidiabetics_univ8_table,
+    mixed_model_CMA_antidiabetics_univ9_table))
+mixed_model_CMA_antidiabetics_univ_final_table
+
+#' 
+#' ###### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMG
+mixed_model_CMG_antidiabetics_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ2 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ3 <- glmmTMB(num_days_CMG ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ4 <- glmmTMB(num_days_CMG ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ5 <- glmmTMB(num_days_CMG ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ6 <- glmmTMB(num_days_CMG ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ7 <- glmmTMB(num_days_CMG ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ8 <- glmmTMB(num_days_CMG ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi_univ9 <- glmmTMB(num_days_CMG ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+# Tables
+mixed_model_CMG_antidiabetics_zeroi_univ1_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ2_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ3_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ4_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ5_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ6_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ7_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ8_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ9_table <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMG_antidiabetics_zeroi_univ1_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ2_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ3_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ4_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ5_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ6_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ7_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ8_table,
+    mixed_model_CMG_antidiabetics_zeroi_univ9_table))
+mixed_model_CMG_antidiabetics_zeroi_univ_final_table
+
+#' 
+#' 
+#' ##### Multivariable Models
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models
+# CMA
+mixed_model_CMA_antidiabetics <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                         data = antidiabetic_patients_final_no_outliers_CMA, 
+                                         family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                         data = antidiabetic_patients_final_no_outliers_CMA, 
+                                         family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics2 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                         data = antidiabetic_patients_final_no_outliers_CMA, 
+                                         family = nbinom1(link = "log"))
+
+mixed_model_CMA_antidiabetics3 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                         data = antidiabetic_patients_final_no_outliers_CMA, 
+                                         family = nbinom1(link = "log"))
+
+
+summary(mixed_model_CMA_antidiabetics3)
+
+kable(tidy(mixed_model_CMA_antidiabetics3, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMA - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC).
+             Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+# CMG
+mixed_model_CMG_antidiabetics <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                         data = antidiabetic_patients_final_no_outliers_CMG, 
+                                         family = nbinom1(link = "log"))
+
+kable(capture.output(check_zeroinflation(mixed_model_CMG_antidiabetics, tolerance = 0.05)),
+      caption = "<b>Zero Inflation Test", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  footnote(general = " Ratio < (1 - 0.05) means that the model is underfitting zeros and probably there is zero-inflation.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+antidiabetic_patients_final_no_outliers_CMG_zi <- antidiabetic_patients_final_no_outliers_CMG %>% 
+  dplyr::mutate(zero_days = ifelse(num_days_CMG == 0, 1, 0))
+
+mixed_model_antidiabetics_log_zi <- glmmTMB(zero_days ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antidiabetic_patients_final_no_outliers_CMG_zi, 
+                                          family = binomial(link="logit"))
+
+kable(tidy(mixed_model_antidiabetics_log_zi, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>Mixed Effects Logistic Regression for Zero Inflated Model Variable Selection</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Mixed effects logistic regression employed to identify variables that predict zero days count (CMG) in order to be used in the zero inflated model. Selected variables had p-value < 0.05.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+mixed_model_CMG_antidiabetics_zeroi <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + (1 | patient_id)) 
+
+mixed_model_CMG_antidiabetics_zeroi1 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + (1 | patient_id)) 
+
+
+mixed_model_CMG_antidiabetics_zeroi2 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antidiabetic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + (1 | patient_id)) 
+
+summary(mixed_model_CMG_antidiabetics_zeroi2)
+
+kable(tidy(mixed_model_CMG_antidiabetics_zeroi2, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMG - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization). Zero inflated model used.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))              
+
+#' 
+#' #### GLME Models Testing
+#' ##### CMA
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMA
+simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3, plot = T) 
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3), alternative = c("two.sided"), plot = F)
+
+#' 
+#' ##### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMG
+simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_zeroi2, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_zeroi2), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_zeroi2), alternative = c("two.sided"), plot = F)
+
+#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
+#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
+#' 
+#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
+#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
+#' 
+#' ## Antihiperlipidemics
+#' ### Frequency Tables, Mean, Median, SD
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+kable(summarize(antihiperlipidemic_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols2 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antihiperlipidemic_patients_final[cols2] <- lapply(antihiperlipidemic_patients_final[cols2], factor)
+                      
+kable(summarize(antihiperlipidemic_patients_final, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px")
+
+#' 
+#' ### CMA and CMG Boxplot and Histograms
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(reshape2)
+library(ggplot2)
+
+boxplot_data_antihiperlipidemic <- data.frame(antihiperlipidemic_patients_final$CMA, antihiperlipidemic_patients_final$CMG)
+
+boxplot3 <- ggplot(data = stack(boxplot_data_antihiperlipidemic), aes(x = ind, y = values)) +
+  stat_boxplot(geom = "errorbar", 
+                    width = 0.2) +
+       geom_boxplot(fill = "#9B2042", colour = "#1F3552", 
+                    alpha = 1, outlier.colour = "red") +
+       scale_y_continuous(name = "%") +  
+       scale_x_discrete(name = "Measure", labels=c("CMA","CMG")) +      
+       ggtitle("Antihiperlipidemics") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+boxplot3
+
+histograma5 <- ggplot(boxplot_data_antihiperlipidemic, aes(x=antihiperlipidemic_patients_final.CMA))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMA Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma5
+
+histograma6 <- ggplot(boxplot_data_antidiabetics, aes(x=antidiabetic_patients_final.CMG))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMG Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma6
+
+#' 
+#' ### Normality tests (Kolmogorov-Smirnov Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Kolmogorov_Smirnov_CMA2 <- ks.test(antihiperlipidemic_patients_final$CMA, "pnorm")
+Kolmogorov_Smirnov_CMG2 <- ks.test(antihiperlipidemic_patients_final$CMG, "pnorm")
+
+kable(tidy(Kolmogorov_Smirnov_CMA2), caption = "<b>CMA Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMG2), caption = "<b>CMG Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' Since n > 5000 Shapiro-Wilk normality test was not used.
+#' 
+#' 
+#' ### Bivariate Analysis
+#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Generic Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Generic Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMG/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMA/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMG/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMA/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMG/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMA/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMG/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+#' 
+#' ### Generalized Linear Mixed Effects Model CMA and CMG
+#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+mean_CMA_antihiperlipidemic_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = antihiperlipidemic_patients_final) 
+kable(tidy(mean_CMA_antihiperlipidemic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Antihiperlipidemics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+mean_CMG_antihiperlipidemic_random <- lme4::lmer(CMG ~ 1 + (1 | patient_id), data = antihiperlipidemic_patients_final) 
+kable(tidy(mean_CMG_antihiperlipidemic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Antihiperlipidemics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Equidispersion Test
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(c(mean(antihiperlipidemic_patients_final$num_days_CMA), var(antihiperlipidemic_patients_final$num_days_CMA)),
+      caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMA ~ 1, data = antihiperlipidemic_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMA - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+kable(c(mean(antihiperlipidemic_patients_final$num_days_CMG), var(antihiperlipidemic_patients_final$num_days_CMG)),
+  caption = "<b>CMG - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = antihiperlipidemic_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+#' 
+#' 
+#' #### Multi-Collinearity Test
+## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = antihiperlipidemic_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
+         data = antihiperlipidemic_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' 
+#' #### GLME Models
+#' ##### Outlier Removal
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+quartiles <- quantile(antihiperlipidemic_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(antihiperlipidemic_patients_final$CMA)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+antihiperlipidemic_patients_final_no_outliers_CMA <- filter(antihiperlipidemic_patients_final, CMA > Lower & CMA < Upper)
+
+# CMG
+quartiles <- quantile(antihiperlipidemic_patients_final$CMG, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(antihiperlipidemic_patients_final$CMG)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+antihiperlipidemic_patients_final_no_outliers_CMG <- filter(antihiperlipidemic_patients_final, CMG > Lower & CMG < Upper)
+
+#' 
+#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols2 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antihiperlipidemic_patients_final_no_outliers_CMA[cols2] <- lapply(antihiperlipidemic_patients_final_no_outliers_CMA[cols2], factor)
+                      
+kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMA, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px")
+
+# CMG
+kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMG, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols2 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")
+antihiperlipidemic_patients_final_no_outliers_CMG[cols2] <- lapply(antihiperlipidemic_patients_final_no_outliers_CMG[cols2], factor)
+                      
+kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMG, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation")), caption = "<b>Categorical Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px")
+
+#' 
+#' ##### Univariable Models
+#' ###### CMA
+#' Negative Binomial regression used due to data overdispersion.
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Univariable Models
+# CMA
+mixed_model_CMA_antihiperlipidemics_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ2 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ3 <- glmmTMB(num_days_CMA ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ4 <- glmmTMB(num_days_CMA ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ5 <- glmmTMB(num_days_CMA ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ6 <- glmmTMB(num_days_CMA ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ7 <- glmmTMB(num_days_CMA ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ8 <- glmmTMB(num_days_CMA ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemics_univ9 <- glmmTMB(num_days_CMA ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+# Tables
+mixed_model_CMA_antihiperlipidemics_univ1_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ2_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ3_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ4_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ5_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ6_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ7_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ8_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ9_table <- tbl_regression(mixed_model_CMA_antihiperlipidemics_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemics_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMA_antihiperlipidemics_univ1_table,
+    mixed_model_CMA_antihiperlipidemics_univ2_table,
+    mixed_model_CMA_antihiperlipidemics_univ3_table,
+    mixed_model_CMA_antihiperlipidemics_univ4_table,
+    mixed_model_CMA_antihiperlipidemics_univ5_table,
+    mixed_model_CMA_antihiperlipidemics_univ6_table,
+    mixed_model_CMA_antihiperlipidemics_univ7_table,
+    mixed_model_CMA_antihiperlipidemics_univ8_table,
+    mixed_model_CMA_antihiperlipidemics_univ9_table))
+mixed_model_CMA_antihiperlipidemics_univ_final_table
+
+#' 
+#' ###### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMG
+mixed_model_CMG_antihiperlipidemics_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ2 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ3 <- glmmTMB(num_days_CMG ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), # error with nbinom1
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ4 <- glmmTMB(num_days_CMG ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ5 <- glmmTMB(num_days_CMG ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ6 <- glmmTMB(num_days_CMG ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ7 <- glmmTMB(num_days_CMG ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ8 <- glmmTMB(num_days_CMG ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom2(link = "log"), # error with nbinom1
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ9 <- glmmTMB(num_days_CMG ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id),                                                  data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))  
+
+# Tables
+mixed_model_CMG_antihiperlipidemics_zeroi_univ1_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ2_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ3_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ4_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ5_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ6_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ7_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ8_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ9_table <- tbl_regression(mixed_model_CMG_antihiperlipidemics_zeroi_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ1_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ2_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ3_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ4_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ5_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ6_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ7_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ8_table,
+    mixed_model_CMG_antihiperlipidemics_zeroi_univ9_table))
+mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table
+
+#' 
+#' 
+#' ##### Multivariable Models
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models
+# CMA
+mixed_model_CMA_antihiperlipidemic <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                              data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                              family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemic1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                              data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                              family = nbinom1(link = "log"))
+
+mixed_model_CMA_antihiperlipidemic2 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                              data = antihiperlipidemic_patients_final_no_outliers_CMA, 
+                                              family = nbinom1(link = "log"))
+
+summary(mixed_model_CMA_antihiperlipidemic2)
+
+kable(tidy(mixed_model_CMA_antihiperlipidemic2, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMA - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))        
+
+# CMG
+mixed_model_CMG_antihiperlipidemic <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                              data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                              family = nbinom1(link = "log"))
+
+kable(capture.output(check_zeroinflation(mixed_model_CMG_antihiperlipidemic, tolerance = 0.05)),
+      caption = "<b>Zero Inflation Test", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  footnote(general = " Ratio < (1 - 0.05) means that the model is underfitting zeros and probably there is zero-inflation.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+antihiperlipidemic_patients_final_no_outliers_CMG_zi <- antihiperlipidemic_patients_final_no_outliers_CMG %>% 
+  dplyr::mutate(zero_days = ifelse(num_days_CMG == 0, 1, 0))
+
+mixed_model_antihiperlipidemics_log_zi <- glmmTMB(zero_days ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = antihiperlipidemic_patients_final_no_outliers_CMG_zi, 
+                                          family = binomial(link="logit"))
+
+kable(tidy(mixed_model_antihiperlipidemics_log_zi, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>Mixed Effects Logistic Regression for Zero Inflated Model Variable Selection</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Mixed effects logistic regression employed to identify variables that predict zero days count (CMG) in order to be used in the zero inflated model. Selected variables had p-value < 0.05.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+mixed_model_CMG_antihiperlipidemic_zeroi <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id)) 
+
+mixed_model_CMG_antihiperlipidemic_zeroi1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id))
+
+mixed_model_CMG_antihiperlipidemic_zeroi2 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id))
+
+mixed_model_CMG_antihiperlipidemic_zeroi3 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = antihiperlipidemic_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id))
+
+summary(mixed_model_CMG_antihiperlipidemic_zeroi3)
+
+kable(tidy(mixed_model_CMG_antihiperlipidemic_zeroi3, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMG - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization). Zero inflated model used.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+#' 
+#' #### GLME Models Testing
+#' ##### CMA
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMA
+simulateResiduals(fittedModel = mixed_model_CMA_antihiperlipidemic2, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_antihiperlipidemic2), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_antihiperlipidemic2), alternative = c("two.sided"), plot = F)
+
+#' 
+#' ##### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMG
+simulateResiduals(fittedModel = mixed_model_CMG_antihiperlipidemic_zeroi3, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_antihiperlipidemic_zeroi3), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_antihiperlipidemic_zeroi3), alternative = c("two.sided"), plot = F)
+
+#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
+#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
+#' 
+#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
+#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
+#' 
+#' ## Global
+#' ### Frequency Tables, Mean, Median, SD
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+kable(summarize(global_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols3 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")
+global_patients_final[cols3] <- lapply(global_patients_final[cols3], factor)
+
+kable(summarize(global_patients_final, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")), caption = "<b>Categorical Variables</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' ### CMA and CMG Boxplot and Histograms
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(reshape2)
+library(ggplot2)
+
+boxplot_data_global <- data.frame(global_patients_final$CMA, global_patients_final$CMG)
+
+boxplot4 <- ggplot(data = stack(boxplot_data_global), aes(x = ind, y = values)) +
+  stat_boxplot(geom = "errorbar", 
+                    width = 0.2) +
+       geom_boxplot(fill = "#9B2042", colour = "#1F3552", 
+                    alpha = 1, outlier.colour = "red") +
+       scale_y_continuous(name = "%") +  
+       scale_x_discrete(name = "Measure", labels=c("CMA","CMG")) +      
+       ggtitle("Global") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+boxplot4
+
+histograma7 <- ggplot(boxplot_data_global, aes(x=global_patients_final.CMA))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMA Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma7
+
+histograma8 <- ggplot(boxplot_data_global, aes(x=global_patients_final.CMG))+
+  geom_histogram(col = "#9F2042", fill = "#9F2042")+
+  labs(x = "CMA", y = "Number",
+       title = "CMG Histogram")+
+  theme_gray()+ 
+  theme(plot.title = element_text(hjust = 0.5))
+
+histograma8
+
+#' 
+#' ### Normality tests (Kolmogorov-Smirnov Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Kolmogorov_Smirnov_CMA3 <- ks.test(global_patients_final$CMA, "pnorm")
+Kolmogorov_Smirnov_CMG3 <- ks.test(global_patients_final$CMG, "pnorm")
+
+kable(tidy(Kolmogorov_Smirnov_CMA3), caption = "<b>CMA Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)%>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(tidy(Kolmogorov_Smirnov_CMG3), caption = "<b>CMG Kolmogorov-Smirnov Test</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since p-value < 0.05 we reject the null hypothesis that the distribution is normal.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+#' Since n > 5000 Shapiro-Wilk normality test was not used.
+#' 
+#' 
+#' ### Bivariate Analysis
+#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(global_patients_final$CMG ~ global_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Gender</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Generic Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(global_patients_final$CMG ~ global_patients_final$generic_usage, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Generic Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Antidepressant Ussage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(global_patients_final$CMG ~ global_patients_final$antidepressant_use, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Antidepressant Usage</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(broom::tidy(t.test(global_patients_final$CMG ~ global_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$age_group)), 
+      caption = "<b>One-Way ANOVA - CMG/Age Group</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMA/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$nuts_ii)), 
+      caption = "<b>One-Way ANOVA - CMG/NUTS II</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMA/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$numb_fam_members)), 
+      caption = "<b>One-Way ANOVA - CMG/Nº Family Members</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMA/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$family_type)), 
+      caption = "<b>One-Way ANOVA - CMG/Family Type</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$avrg_fin_sup_week)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Financial Support (€/week) - Quintiles</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMA/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$avrg_numb_drugs_refill)), 
+      caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$drug_class)), 
+      caption = "<b>One-Way ANOVA - CMA/Drug Class</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$drug_class)), 
+      caption = "<b>One-Way ANOVA - CMG/Drug Class</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
+
+#' 
+#' ### Generalized Linear Mixed Effects Model CMA and CMG
+#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+mean_CMA_global_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = global_patients_final) 
+kable(tidy(mean_CMA_global_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Overall</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+mean_CMG_global_random <- lme4::lmer(CMG ~ 1 + (1 | patient_id), data = global_patients_final) 
+kable(tidy(mean_CMG_global_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Overall</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+#' 
+#' #### Equidispersion Test
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+kable(c(mean(global_patients_final$num_days_CMA), var(global_patients_final$num_days_CMA)),
+      caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMA ~ 1, data = global_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMA - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+kable(c(mean(global_patients_final$num_days_CMG), var(global_patients_final$num_days_CMG)),
+      caption = "<b>CMG - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  pack_rows("Mean", 1, 1) %>%
+  pack_rows("Variance", 2, 2) 
+
+remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = global_patients_final, family = "poisson"), trafo = 1)),
+   caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
+
+#' 
+#' #### Multi-Collinearity Test
+## ---- echo=FALSE, message=FALSE, results='hide'--------------------------------------------------------------------------------------------------------------------------
+kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + drug_class + offset(log(time_to_event)), 
+         data = global_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + drug_class + offset(log(time_to_event)), 
+         data = global_patients_final, family = "poisson"), verbose = FALSE),
+      caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>%
+  footnote(general = " Since the GVIF value is larger than 2.5 for the number of family members (num_fam_members) and it did not have a significant association with the outcome variable in bivariate analysis this variable was excluded from multivariable analysis.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+#' 
+#' #### GLME Models
+#' ##### Outlier Removal
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+quartiles <- quantile(global_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(global_patients_final$CMA)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+global_patients_final_no_outliers_CMA <- filter(global_patients_final, CMA > Lower & CMA < Upper)
+
+# CMG
+quartiles <- quantile(global_patients_final$CMG, probs=c(.25, .75), na.rm = FALSE)
+IQR <- IQR(global_patients_final$CMG)
+ 
+Lower <- quartiles[1] - 1.5*IQR
+Upper <- quartiles[2] + 1.5*IQR 
+ 
+global_patients_final_no_outliers_CMG <- filter(global_patients_final, CMG > Lower & CMG < Upper)
+
+#' 
+#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
+## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+# CMA
+kable(summarize(global_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols3 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")
+global_patients_final_no_outliers_CMA[cols3] <- lapply(global_patients_final_no_outliers_CMA[cols3], factor)
+
+kable(summarize(global_patients_final_no_outliers_CMA, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")), caption = "<b>Categorical Variables - CMA</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+# CMG
+kable(summarize(global_patients_final_no_outliers_CMG, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
+  row_spec(2:4, bold = T)
+                                          
+cols3 <- c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")
+global_patients_final_no_outliers_CMG[cols3] <- lapply(global_patients_final_no_outliers_CMG[cols3], factor)
+
+kable(summarize(global_patients_final_no_outliers_CMG, type = "factor", variables = c("pharmacy_loyalty", "avrg_fin_sup_week", "avrg_numb_drugs_refill", "gender", "age_group", "nuts_ii", "family_type", "generic_usage", "antidepressant_use", "discontinuation", "drug_class")), caption = "<b>Categorical Variables - CMG</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") 
+
+#' 
+#' ##### Univariable Models
+#' ###### CMA
+#' Negative Binomial regression used due to data overdispersion.
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Univariable Models
+# CMA
+mixed_model_CMA_global_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ2 <- glmmTMB(num_days_CMA ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ3 <- glmmTMB(num_days_CMA ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ4 <- glmmTMB(num_days_CMA ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ5 <- glmmTMB(num_days_CMA ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ6 <- glmmTMB(num_days_CMA ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ7 <- glmmTMB(num_days_CMA ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ8 <- glmmTMB(num_days_CMA ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ9 <- glmmTMB(num_days_CMA ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+mixed_model_CMA_global_univ10 <- glmmTMB(num_days_CMA ~ as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMA, 
+                                          family = nbinom1(link = "log"))
+
+# Tables
+mixed_model_CMA_global_univ1_table <- tbl_regression(mixed_model_CMA_global_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ2_table <- tbl_regression(mixed_model_CMA_global_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ3_table <- tbl_regression(mixed_model_CMA_global_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ4_table <- tbl_regression(mixed_model_CMA_global_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ5_table <- tbl_regression(mixed_model_CMA_global_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ6_table <- tbl_regression(mixed_model_CMA_global_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ7_table <- tbl_regression(mixed_model_CMA_global_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ8_table <- tbl_regression(mixed_model_CMA_global_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ9_table <- tbl_regression(mixed_model_CMA_global_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ10_table <- tbl_regression(mixed_model_CMA_global_univ10, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(drug_class)" ~ "Drug Class",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMA_global_univ1_table,
+    mixed_model_CMA_global_univ2_table,
+    mixed_model_CMA_global_univ3_table,
+    mixed_model_CMA_global_univ4_table,
+    mixed_model_CMA_global_univ5_table,
+    mixed_model_CMA_global_univ6_table,
+    mixed_model_CMA_global_univ7_table,
+    mixed_model_CMA_global_univ8_table,
+    mixed_model_CMA_global_univ9_table,
+    mixed_model_CMA_global_univ10_table))
+mixed_model_CMA_global_univ_final_table
+
+#' 
+#' ###### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMG
+mixed_model_CMG_global_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ2 <- glmmTMB(num_days_CMG ~ as.factor(avrg_fin_sup_week) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ3 <- glmmTMB(num_days_CMG ~ as.factor(avrg_numb_drugs_refill) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ4 <- glmmTMB(num_days_CMG ~ as.factor(gender) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ5 <- glmmTMB(num_days_CMG ~ as.factor(age_group) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ6 <- glmmTMB(num_days_CMG ~ as.factor(nuts_ii) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ7 <- glmmTMB(num_days_CMG ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ8 <- glmmTMB(num_days_CMG ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ9 <- glmmTMB(num_days_CMG ~ as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi_univ10 <- glmmTMB(num_days_CMG ~ as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ 1 + (1 | patient_id))
+
+# Tables
+mixed_model_CMG_global_zeroi_univ1_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ1, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ2_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ2, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ3_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ3, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ4_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ4, 
+                                                             exponentiate = TRUE,  
+                                                             label ="as.factor(gender)" ~ "Sex",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ5_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ5, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(age_group)" ~ "Age Group",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ6_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ6, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ7_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ7, 
+                                                             exponentiate = TRUE,
+                                                             label = "as.factor(family_type)" ~ "Type of Family",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ8_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ8, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ9_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ9, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ10_table <- tbl_regression(mixed_model_CMG_global_zeroi_univ10, 
+                                                             exponentiate = TRUE, 
+                                                             label = "as.factor(drug_class)" ~ "Drug Class",
+                                                             estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                             pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_univ_final_table <- tbl_stack(
+  tbls = list(
+    mixed_model_CMG_global_zeroi_univ1_table,
+    mixed_model_CMG_global_zeroi_univ2_table,
+    mixed_model_CMG_global_zeroi_univ3_table,
+    mixed_model_CMG_global_zeroi_univ4_table,
+    mixed_model_CMG_global_zeroi_univ5_table,
+    mixed_model_CMG_global_zeroi_univ6_table,
+    mixed_model_CMG_global_zeroi_univ7_table,
+    mixed_model_CMG_global_zeroi_univ8_table,
+    mixed_model_CMG_global_zeroi_univ9_table,
+    mixed_model_CMG_global_zeroi_univ10_table))
+mixed_model_CMG_global_zeroi_univ_final_table
+
+#' 
+#' 
+#' ##### Multivariable Models
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models
+# CMA
+mixed_model_CMA_global <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                  data = global_patients_final_no_outliers_CMA, 
+                                  family = nbinom1(link = "log"))
+
+mixed_model_CMA_global1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                  data = global_patients_final_no_outliers_CMA, 
+                                  family = nbinom1(link = "log"))
+
+summary(mixed_model_CMA_global1)
+
+kable(tidy(mixed_model_CMA_global1, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMA - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           general_title = "Observations:",        
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+# CMG
+mixed_model_CMG_global <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                  data = global_patients_final_no_outliers_CMG, 
+                                  family = nbinom1(link = "log"))
+
+kable(capture.output(check_zeroinflation(mixed_model_CMG_global, tolerance = 0.05)),
+      caption = "<b>Zero Inflation Test", format = 'html', col.names = c("Value")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  footnote(general = " Ratio < (1 - 0.05) means that the model is underfitting zeros and probably there is zero-inflation.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+global_patients_final_no_outliers_CMG_zi <- global_patients_final_no_outliers_CMG %>% 
+  dplyr::mutate(zero_days = ifelse(num_days_CMG == 0, 1, 0))
+
+mixed_model_global_log_zi <- glmmTMB(zero_days ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                          data = global_patients_final_no_outliers_CMG_zi, 
+                                          family = binomial(link="logit"))
+
+kable(tidy(mixed_model_global_log_zi, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>Mixed Effects Logistic Regression for Zero Inflated Model Variable Selection</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Mixed effects logistic regression employed to identify variables that predict zero days count (CMG) in order to be used in the zero inflated model. Selected variables had p-value < 0.05.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+mixed_model_CMG_global_zeroi <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + (1 | patient_id)) 
+
+mixed_model_CMG_global_zeroi1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
+                                                 data = global_patients_final_no_outliers_CMG, 
+                                                 family = nbinom1(link = "log"), 
+                                                 ziformula = ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + (1 | patient_id)) 
+
+summary(mixed_model_CMG_global_zeroi1)
+
+kable(tidy(mixed_model_CMG_global_zeroi1, exponentiate = TRUE, conf.int = TRUE),
+      caption = "<b>CMG - Generalized Linear Mixed Effects Model Optimized - Estimates</b>", format = 'html') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
+  scroll_box(height = "600px") %>% 
+  footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization). Zero inflated model used.",
+           general_title = "Observations:",
+           footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+#' 
+#' #### GLME Models Testing
+#' ##### CMA
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMA
+simulateResiduals(fittedModel =  mixed_model_CMA_global1, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_global1), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_global1), alternative = c("two.sided"), plot = F)
+
+#' 
+#' ##### CMG
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CMG
+simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1, plot = T)
+
+testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1), plot= F)
+
+testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1), alternative = c("two.sided"), plot = F)
+
+#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
+#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
+#' 
+#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
+#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
+#' 
+#' ## Survival Analysis
+#' ### Kaplan-Meier curves and Log-rank/Mantel-Haenszel test 
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(survival)
+library(ggfortify)
+library(survminer)
+
+# Transform event variable to numerical for survfit fuction 
+anticoagulant_patients_final$discontinuation <- as.numeric(as.character(anticoagulant_patients_final$discontinuation))
+antidiabetic_patients_final$discontinuation <- as.numeric(as.character(antidiabetic_patients_final$discontinuation))
+antihiperlipidemic_patients_final$discontinuation <- as.numeric(as.character(antihiperlipidemic_patients_final$discontinuation))
+global_patients_final$discontinuation <- as.numeric(as.character(global_patients_final$discontinuation))
+
+# Kaplan-Meier - Global
+surv_global_km <- survfit(Surv(time_to_event, discontinuation) ~ 1, data=global_patients_final)
+
+outputs_list_km_global <- list(surv_global_km, summary(surv_global_km, times = c(180,270,360)))
+outputs_list_km_global
+
+km_global <-
+  ggsurvplot(surv_global_km, 
+           data = global_patients_final, 
+           fun = "pct", 
+           conf.int = TRUE,
+           conf.int.style = "step",
+           conf.int.alpha = 1,
+           censor = TRUE,
+           legend.title = "", 
+           xlab = "Time (days)", 
+           ylab = "Survival Probability (%)", 
+           legend = "bottom",
+           legend.labs = c("Total"),
+           title = "Kaplan-Meier Curves",
+           surv.median.line = c("v"),
+           ggtheme = theme_minimal() +  theme(plot.title = element_text(hjust = 0.5, face = "bold")))
+km_global
+
+# Kaplan-Meier - Drug-Class
+surv_global_km_drug <- survfit(Surv(time_to_event, discontinuation) ~ drug_class, data=global_patients_final)
+
+outputs_list_km_global_drug <- list(surv_global_km_drug, summary(surv_global_km_drug, times = c(180,270,360)))
+outputs_list_km_global_drug
+
+km_drugs <-
+  ggsurvplot(surv_global_km_drug, 
+           data = global_patients_final, 
+           fun = "pct", 
+           conf.int = TRUE,
+           conf.int.style = "step",
+           conf.int.alpha = 1,
+           censor = TRUE,
+           legend.title = "Drug Class", 
+           xlab = "Time (days)", 
+           ylab = "Survival Probability (%)", 
+           legend = "bottom",
+           legend.labs = c("Anticoagulants",
+ "Antidiabetics", "Antihiperlipidemics"),
+           title = "Kaplan-Meier Curves",
+           pval = TRUE,
+           pval.size = 4,
+           pval.coord = c(1000, 70),
+           pval.method = TRUE,
+           pval.method.coord = c(770, 70), 
+           surv.median.line = c("v"),
+           ggtheme = theme_minimal() +  theme(plot.title = element_text(hjust = 0.5, face = "bold"))) 
+km_drugs
+
+# Log-rank or Mantel-Haenszel Test
+survdiff(Surv(time_to_event, discontinuation) ~ drug_class, data=global_patients_final)
+
+#' 
+#' ### Mixed Effects Cox Regression
+#' #### Mixed Effects Cox Regression Models
+#' ##### Anticoagulants
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(coxme)
+library(gtsummary)
+
+# Anticoagulants
+# Univariable Models
+anticoagulants_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final) 
+
+anticoagulants_cox_model_univ2 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(age_group) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final) 
+
+anticoagulants_cox_model_univ3 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(nuts_ii) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final) 
+
+anticoagulants_cox_model_univ4 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(family_type) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final) 
+
+anticoagulants_cox_model_univ5 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final)
+
+anticoagulants_cox_model_univ6 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final)
+
+anticoagulants_cox_model_univ7 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_fin_sup_week) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final)
+
+anticoagulants_cox_model_univ8 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_numb_drugs_refill) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final)
+
+# Tables
+anticoagulants_cox_model_univ1_table <- tbl_regression(anticoagulants_cox_model_univ1,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(gender)" ~ "Sex",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ2_table <- tbl_regression(anticoagulants_cox_model_univ2,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(age_group)" ~ "Age Group",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ3_table <- tbl_regression(anticoagulants_cox_model_univ3,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ4_table <- tbl_regression(anticoagulants_cox_model_univ4,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(family_type)" ~ "Type of Family",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ5_table <- tbl_regression(anticoagulants_cox_model_univ5,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ6_table <- tbl_regression(anticoagulants_cox_model_univ6,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ7_table <- tbl_regression(anticoagulants_cox_model_univ7,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ8_table <- tbl_regression(anticoagulants_cox_model_univ8,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_univ_table_final <- tbl_stack(
+  tbls = list(
+    anticoagulants_cox_model_univ6_table,
+    anticoagulants_cox_model_univ7_table,
+    anticoagulants_cox_model_univ8_table,
+    anticoagulants_cox_model_univ1_table,
+    anticoagulants_cox_model_univ2_table,
+    anticoagulants_cox_model_univ3_table,
+    anticoagulants_cox_model_univ4_table,
+    anticoagulants_cox_model_univ5_table))
+anticoagulants_cox_model_univ_table_final
+
+# Multivariable Models
+anticoagulants_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = anticoagulant_patients_final) 
+
+#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
+#' 
+#' ##### Antidiabetics
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Antidiabetics
+# Univariable Models
+antidiabetics_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ2 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(age_group) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ3 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(nuts_ii) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ4 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(family_type) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ5 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(generic_usage) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ6 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+antidiabetics_cox_model_univ7 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final)
+
+antidiabetics_cox_model_univ8 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_fin_sup_week) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final)
+
+antidiabetics_cox_model_univ9 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_numb_drugs_refill) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final)
+
+# Tables
+antidiabetics_cox_model_univ1_table <- tbl_regression(antidiabetics_cox_model_univ1,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(gender)" ~ "Sex",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ2_table <- tbl_regression(antidiabetics_cox_model_univ2,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(age_group)" ~ "Age Group",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ3_table <- tbl_regression(antidiabetics_cox_model_univ3,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ4_table <- tbl_regression(antidiabetics_cox_model_univ4,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(family_type)" ~ "Type of Family",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ5_table <- tbl_regression(antidiabetics_cox_model_univ5,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ6_table <- tbl_regression(antidiabetics_cox_model_univ6,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ7_table <- tbl_regression(antidiabetics_cox_model_univ7,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ8_table <- tbl_regression(antidiabetics_cox_model_univ8,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ9_table <- tbl_regression(antidiabetics_cox_model_univ9,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antidiabetics_cox_model_univ_table_final <- tbl_stack(
+  tbls = list(
+    antidiabetics_cox_model_univ7_table,
+    antidiabetics_cox_model_univ8_table,
+    antidiabetics_cox_model_univ9_table,
+    antidiabetics_cox_model_univ1_table,
+    antidiabetics_cox_model_univ2_table,
+    antidiabetics_cox_model_univ3_table,
+    antidiabetics_cox_model_univ4_table,
+    antidiabetics_cox_model_univ5_table,
+    antidiabetics_cox_model_univ6_table))
+antidiabetics_cox_model_univ_table_final
+
+# Multivariable Models
+antidiabetics_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = antidiabetic_patients_final) 
+
+#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
+#' 
+#' ##### Antihiperlipidemics
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Antihiperlipidemics
+# Univariable Models
+antihiperlipidemics_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ2 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(age_group) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ3 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(nuts_ii) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ4 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(family_type) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ5 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(generic_usage) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ6 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+antihiperlipidemics_cox_model_univ7 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final)
+
+antihiperlipidemics_cox_model_univ8 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_fin_sup_week) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final)
+
+antihiperlipidemics_cox_model_univ9 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_numb_drugs_refill) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final)
+
+# Tables
+antihiperlipidemics_cox_model_univ1_table <- tbl_regression(antihiperlipidemics_cox_model_univ1,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(gender)" ~ "Sex",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ2_table <- tbl_regression(antihiperlipidemics_cox_model_univ2,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(age_group)" ~ "Age Group",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ3_table <- tbl_regression(antihiperlipidemics_cox_model_univ3,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ4_table <- tbl_regression(antihiperlipidemics_cox_model_univ4,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(family_type)" ~ "Type of Family",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ5_table <- tbl_regression(antihiperlipidemics_cox_model_univ5,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ6_table <- tbl_regression(antihiperlipidemics_cox_model_univ6,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ7_table <- tbl_regression(antihiperlipidemics_cox_model_univ7,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ8_table <- tbl_regression(antihiperlipidemics_cox_model_univ8,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ9_table <- tbl_regression(antihiperlipidemics_cox_model_univ9,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_univ_table_final <- tbl_stack(
+  tbls = list(
+    antihiperlipidemics_cox_model_univ7_table,
+    antihiperlipidemics_cox_model_univ8_table,
+    antihiperlipidemics_cox_model_univ9_table,
+    antihiperlipidemics_cox_model_univ1_table,
+    antihiperlipidemics_cox_model_univ2_table,
+    antihiperlipidemics_cox_model_univ3_table,
+    antihiperlipidemics_cox_model_univ4_table,
+    antihiperlipidemics_cox_model_univ5_table,
+    antihiperlipidemics_cox_model_univ6_table))
+antihiperlipidemics_cox_model_univ_table_final
+
+# Multivariable Models
+antihiperlipidemics_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = antihiperlipidemic_patients_final) 
+
+#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
+#' 
+#' ##### Global
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Global
+# Univariable Models
+global_patients_final$discontinuation <- as.numeric(as.character(global_patients_final$discontinuation))
+
+global_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ2 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(age_group) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ3 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(nuts_ii) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ4 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(family_type) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ5 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(generic_usage) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ6 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(antidepressant_use) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ7 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(drug_class) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+global_cox_model_univ8 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + (1 | patient_id), 
+                                  data = global_patients_final)
+
+global_cox_model_univ9 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_fin_sup_week) + (1 | patient_id), 
+                                  data = global_patients_final)
+
+global_cox_model_univ10 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(avrg_numb_drugs_refill) + (1 | patient_id), 
+                                  data = global_patients_final)
+
+# Tables
+global_cox_model_univ1_table <- tbl_regression(global_cox_model_univ1,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(gender)" ~ "Sex",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ2_table <- tbl_regression(global_cox_model_univ2,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(age_group)" ~ "Age Group",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ3_table <- tbl_regression(global_cox_model_univ3,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(nuts_ii)" ~ "NUTS II",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ4_table <- tbl_regression(global_cox_model_univ4,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(family_type)" ~ "Type of Family",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ5_table <- tbl_regression(global_cox_model_univ5,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(generic_usage)" ~ "Generic Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ6_table <- tbl_regression(global_cox_model_univ6,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ7_table <- tbl_regression(global_cox_model_univ7,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(drug_class)" ~ "Drug Class",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ8_table <- tbl_regression(global_cox_model_univ8,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ9_table <- tbl_regression(global_cox_model_univ9,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ10_table <- tbl_regression(global_cox_model_univ10,
+                                                       exponentiate = TRUE,
+                                                       label = "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_univ_table_final <- tbl_stack(
+  tbls = list(
+    global_cox_model_univ8_table,
+    global_cox_model_univ9_table,
+    global_cox_model_univ10_table,
+    global_cox_model_univ1_table,
+    global_cox_model_univ2_table,
+    global_cox_model_univ3_table,
+    global_cox_model_univ4_table,
+    global_cox_model_univ5_table,
+    global_cox_model_univ6_table,
+    global_cox_model_univ7_table))
+global_cox_model_univ_table_final
+
+# Multivariable Models
+global_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + (1 | patient_id), 
+                                  data = global_patients_final) 
+
+#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
+#' 
+#' #### Mixed Effects Cox Regression Model Testing (Schoenfeld residuals)
+#' ##### Anticoagulants
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Anticoagulants
+cox.zph(anticoagulants_cox_model)
+
+ggcoxzph(cox.zph(anticoagulants_cox_model), caption = "Anticoagulants Model")
+
+#' 
+#' ##### Antidiabetics
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Antidiabetics
+cox.zph(antidiabetics_cox_model)
+
+ggcoxzph(cox.zph(antidiabetics_cox_model), caption = "Antidiabetics Model")
+
+#' 
+#' ##### Antihiperlipidemics
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Antihiperlipidemics
+cox.zph(antihiperlipidemics_cox_model)
+
+ggcoxzph(cox.zph(antihiperlipidemics_cox_model), caption = "Antihiperlipidemics Model")
+
+#' 
+#' ##### Global
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Global
+cox.zph(global_cox_model)
+
+ggcoxzph(cox.zph(global_cox_model), caption = "Global Model")
+
+#' <p>Schoenfeld residuals tested for selected mixed effects models.</p> 
+#' <p>Though some variables in some models were significant for Schoenfeld residuals test, we decided to keep them in the model without any transformation or time dependency due to large sample size which tends to show statistically "significant" deviation and residuals plot graphical evaluations which don't show any deviation from constant hazards over time.</p>
+#' <p> See: EdM (https://stats.stackexchange.com/users/28500/edm), Violated non-proportional hazards - Cox regression model of time-dependent covariable, URL (version: 2020-12-07): https://stats.stackexchange.com/q/499752 </p>
+#' 
+#' ## Main Results - Tables and Graphs
+#' ### Continuous Multiple Interval Measure of Medication Acquisition (CMA)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(gt)
+library(broom.helpers)
+
+# CMA
+# Means
+kable(tidy(mean_CMA_anticoagulants_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Anticoagulants</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMA_antidiabetic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Antidiabetics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMA_antihiperlipidemic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Antihiperlipidemics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMA_global_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMA - Overall</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+# Anticoagulants
+mixed_model_CMA_anticoagulants_table <- tbl_regression(mixed_model_CMA_anticoagulants, 
+                                                       exponentiate = TRUE,
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_anticoagulants3_table <- tbl_regression(mixed_model_CMA_anticoagulants3, 
+                                                       exponentiate = TRUE,
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                     "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMA_anticoagulants_final_table <- tbl_merge(list(mixed_model_CMA_anticoagulants_univ_final_table, mixed_model_CMA_anticoagulants_table, mixed_model_CMA_anticoagulants3_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full Model**", "**Multivariable Optimized Model**"))
+
+
+mixed_model_CMA_anticoagulants_final_table <- mixed_model_CMA_anticoagulants_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Anticoagulants - Continuous Multiple Interval Measure of Medication Acquisition (CMA)</p>**
+**<p>Negative Binomial Mixed Effects Model</p>** (1410 Observations/1174 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+  
+# Antidiabetics
+mixed_model_CMA_antidiabetics_table <- tbl_regression(mixed_model_CMA_antidiabetics, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antidiabetics3_table <- tbl_regression(mixed_model_CMA_antidiabetics3, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMA_antidiabetics_final_table <- tbl_merge(list(mixed_model_CMA_antidiabetics_univ_final_table, mixed_model_CMA_antidiabetics_table, mixed_model_CMA_antidiabetics3_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full Model**", "**Multivariable Optimized Model**"))
+
+
+mixed_model_CMA_antidiabetics_final_table <- mixed_model_CMA_antidiabetics_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antidiabetics - Continuous Multiple Interval Measure of Medication Acquisition (CMA)</p>**
+**<p>Negative Binomial Mixed Effects Model</p>** (2489 Observations/2142 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Antihiperlipidemics
+mixed_model_CMA_antihiperlipidemic_table <- tbl_regression(mixed_model_CMA_antihiperlipidemic, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_antihiperlipidemic2_table <- tbl_regression(mixed_model_CMA_antihiperlipidemic2, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMA_antihiperlipidemic_final_table <- tbl_merge(list(mixed_model_CMA_antihiperlipidemics_univ_final_table, mixed_model_CMA_antihiperlipidemic_table, mixed_model_CMA_antihiperlipidemic2_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full Model**", "**Multivariable Optimized Model**"))
+
+
+mixed_model_CMA_antihiperlipidemic_final_table <- mixed_model_CMA_antihiperlipidemic_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antihiperlipidemics - Continuous Multiple Interval Measure of Medication Acquisition (CMA)</p>**
+**<p>Negative Binomial Mixed Effects Model</p>** (6011 Observations/5085 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Global
+mixed_model_CMA_global_table <- tbl_regression(mixed_model_CMA_global, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "as.factor(drug_class)" ~ "Drug Class",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMA_global1_table <- tbl_regression(mixed_model_CMA_global1, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.mixed::tidy,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "as.factor(drug_class)" ~ "Drug Class",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMA_global_final_table <- tbl_merge(list(mixed_model_CMA_global_univ_final_table, mixed_model_CMA_global_table, mixed_model_CMA_global1_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full Model**", "**Multivariable Optimized Model**"))
+
+
+mixed_model_CMA_global_final_table <- mixed_model_CMA_global_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Global - Continuous Multiple Interval Measure of Medication Acquisition (CMA)</p>**
+**<p>Negative Binomial Mixed Effects Model</p>** (9954 Observations/6459 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Optimized Models
+
+mixed_model_CMA_optimized_models_table <- tbl_merge(list(mixed_model_CMA_anticoagulants3_table, mixed_model_CMA_antidiabetics3_table, mixed_model_CMA_antihiperlipidemic2_table, mixed_model_CMA_global1_table), 
+  tab_spanner = c("**Anticoagulants**", "**Antidiabetics**", "**Antihiperlipidemics**", "**Global**"))
+
+mixed_model_CMA_optimized_models_table <- mixed_model_CMA_optimized_models_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Continuous Multiple Interval Measure of Medication Acquisition (CMA)</p>**
+**<p>Negative Binomial Mixed Effects Models - Optimized</p>**") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**aRR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**",
+                      estimate_4 = "**aRR**",
+                      ci_4 = "**95% CI**",
+                      p.value_4 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "estimate_4", "ci_1","ci_2","ci_3", "ci_4") ~ "aRR: adjusted relative risk; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3", "ci_4")) 
+
+mixed_model_CMA_optimized_models_table <- mixed_model_CMA_optimized_models_table %>% 
+  modify_table_body(
+    ~.x %>%
+      arrange(desc(variable == "patient_id.sd__(Intercept)")) %>% 
+      arrange(desc(variable == "as.factor(drug_class)")) %>%
+      arrange(desc(variable == "as.factor(antidepressant_use)")) %>%
+      arrange(desc(variable == "as.factor(generic_usage)")) %>%
+      arrange(desc(variable == "as.factor(family_type)")) %>%
+      arrange(desc(variable == "as.factor(nuts_ii)")) %>%
+      arrange(desc(variable == "as.factor(age_group)")) %>%
+      arrange(desc(variable == "as.factor(gender)")) %>%
+      arrange(desc(variable == "as.factor(avrg_numb_drugs_refill)")) %>%
+      arrange(desc(variable == "as.factor(avrg_fin_sup_week)")) %>%
+      arrange(desc(variable == "as.factor(pharmacy_loyalty)")))
+   
+mixed_model_CMA_anticoagulants_final_table                  
+mixed_model_CMA_antidiabetics_final_table
+mixed_model_CMA_antihiperlipidemic_final_table
+mixed_model_CMA_global_final_table
+mixed_model_CMA_optimized_models_table
+
+#' 
+#' ### Continuous Multiple Interval Measure of Medication Gaps (CMG)
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CMG
+# Means
+kable(tidy(mean_CMG_anticoagulants_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Anticoagulants</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMG_antidiabetic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Antidiabetics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMG_antihiperlipidemic_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Antihiperlipidemics</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+kable(tidy(mean_CMG_global_random, effects = "fixed", conf.int = TRUE),
+      caption = "<b>Mean CMG - Overall</b>", format = 'html') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
+
+# Anticoagulants
+mixed_model_CMG_anticoagulants_zeroi_table_cond <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2)) 
+
+mixed_model_CMG_anticoagulants_zeroi_table_zi <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list(
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi2_table_cond <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi2, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list(
+                                                                    "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_anticoagulants_zeroi2_table_zi <- tbl_regression(mixed_model_CMG_anticoagulants_zeroi2, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list(
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMG_anticoagulants_zeroi_table_total <- tbl_stack(
+  list(mixed_model_CMG_anticoagulants_zeroi_table_cond, 
+       mixed_model_CMG_anticoagulants_zeroi_table_zi))
+
+mixed_model_CMG_anticoagulants2_zeroi_table_total <- tbl_stack(
+  list(mixed_model_CMG_anticoagulants_zeroi2_table_cond, 
+       mixed_model_CMG_anticoagulants_zeroi2_table_zi))
+
+mixed_model_CMG_anticoagulants_zeroi_final_table <- tbl_merge(
+  list(mixed_model_CMG_anticoagulants_zeroi_univ_final_table,
+       mixed_model_CMG_anticoagulants_zeroi_table_total,
+       mixed_model_CMG_anticoagulants2_zeroi_table_total),
+       tab_spanner = c("**Univariable Model**",
+                  "**Multivariable Full Model**", 
+                  "**Multivariable Optimized Model**"))
+
+mixed_model_CMG_anticoagulants_zeroi_final_table <- mixed_model_CMG_anticoagulants_zeroi_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Anticoagulants - Continuous Multiple Interval Measure of Medication Gaps (CMG)</p>**
+**<p>Negative Binomial Zero-Inflated Mixed Effects Model</p>** (1390 Observations/1160 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; zi: zero-inflation model; 95% confidence intervals presented. ", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Antidiabetics 
+mixed_model_CMG_antidiabetics_zeroi_table_cond <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+                                                                  
+mixed_model_CMG_antidiabetics_zeroi_table_zi <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list(
+                                              "as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                              "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                              "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                              "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMG_antidiabetics_zeroi2_table_cond <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi2, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list(
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antidiabetics_zeroi2_table_zi <- tbl_regression(mixed_model_CMG_antidiabetics_zeroi2, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                                                               "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMG_antidiabetics_zeroi_table_total <- tbl_stack(
+  list(mixed_model_CMG_antidiabetics_zeroi_table_cond, 
+       mixed_model_CMG_antidiabetics_zeroi_table_zi))
+
+mixed_model_CMG_antidiabetics_zeroi2_table_total <- tbl_stack(
+  list(mixed_model_CMG_antidiabetics_zeroi2_table_cond, 
+       mixed_model_CMG_antidiabetics_zeroi2_table_zi))
+
+
+mixed_model_CMG_antidiabetics_zeroi_final_table <- tbl_merge(
+  list(mixed_model_CMA_antidiabetics_univ_final_table,
+       mixed_model_CMG_antidiabetics_zeroi_table_total,
+       mixed_model_CMG_antidiabetics_zeroi2_table_total),
+       tab_spanner = c("**Univariable Model**",
+                  "**Multivariable Full Model**", 
+                  "**Multivariable Optimized Model**"))
+
+mixed_model_CMG_antidiabetics_zeroi_final_table <- mixed_model_CMG_antidiabetics_zeroi_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antidiabetics - Continuous Multiple Interval Measure of Medication Gaps (CMG)</p>**
+**<p>Negative Binomial Zero-Inflated Mixed Effects Model</p>** (2479 Observations/2138 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; zi: zero-inflation model; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Antihiperlipidemics 
+mixed_model_CMG_antihiperlipidemic_zeroi_table_cond <- tbl_regression(mixed_model_CMG_antihiperlipidemic_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+                                                                  
+mixed_model_CMG_antihiperlipidemic_zeroi_table_zi <- tbl_regression(mixed_model_CMG_antihiperlipidemic_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II (zi)",
+                                                                    "as.factor(family_type)" ~ "Type of Family (zi)",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage (zi)",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage (zi)",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMG_antihiperlipidemic_zeroi3_table_cond <- tbl_regression(mixed_model_CMG_antihiperlipidemic_zeroi3, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_antihiperlipidemic_zeroi3_table_zi <- tbl_regression(mixed_model_CMG_antihiperlipidemic_zeroi3, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II (zi)",
+                                                                    "as.factor(family_type)" ~ "Type of Family (zi)",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage (zi)",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage (zi)",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+mixed_model_CMG_antihiperlipidemic_zeroi_table_total <- tbl_stack(
+  list(mixed_model_CMG_antihiperlipidemic_zeroi_table_cond, 
+       mixed_model_CMG_antihiperlipidemic_zeroi_table_zi))
+
+mixed_model_CMG_antihiperlipidemic_zeroi3_table_total <- tbl_stack(
+  list(mixed_model_CMG_antihiperlipidemic_zeroi3_table_cond, 
+       mixed_model_CMG_antihiperlipidemic_zeroi3_table_zi))
+
+
+mixed_model_CMG_antihiperlipidemic_zeroi_final_table <- tbl_merge(
+  list(mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table,
+       mixed_model_CMG_antihiperlipidemic_zeroi_table_total,
+       mixed_model_CMG_antihiperlipidemic_zeroi3_table_total),
+       tab_spanner = c("**Univariable Model**",
+                  "**Multivariable Full Model**", 
+                  "**Multivariable Optimized Model**"))
+
+mixed_model_CMG_antihiperlipidemic_zeroi_final_table <- mixed_model_CMG_antihiperlipidemic_zeroi_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antihiperlipidemics - Continuous Multiple Interval Measure of Medication Gaps (CMG)</p>**
+**<p>Negative Binomial Zero-Inflated Mixed Effects Model</p>** (5929 Observations/5024 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; zi: zero-inflation model; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Global
+mixed_model_CMG_global_zeroi_table_cond <- tbl_regression(mixed_model_CMG_global_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "as.factor(drug_class)" ~ "Drug Class",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+                                                                  
+mixed_model_CMG_global_zeroi_table_zi <- tbl_regression(mixed_model_CMG_global_zeroi, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                                                    "as.factor(age_group)" ~ "Age Group (zi)",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II (zi)",
+                                                                    "as.factor(family_type)" ~ "Type of Family (zi)",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage (zi)",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage (zi)",
+                                                                    "as.factor(drug_class)" ~ "Drug Class (zi)",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi1_table_cond <- tbl_regression(mixed_model_CMG_global_zeroi1, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "cond", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "as.factor(drug_class)" ~ "Drug Class",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi1_table_zi <- tbl_regression(mixed_model_CMG_global_zeroi1, 
+                                                                  tidy_fun = function(...) broom.mixed::tidy(..., component = "zi", verbose = FALSE),
+                                                                  exponentiate = TRUE,
+                                                                  label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty (zi)",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles (zi)",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit (zi)",
+                                                                    "as.factor(age_group)" ~ "Age Group (zi)",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II (zi)",
+                                                                    "as.factor(family_type)" ~ "Type of Family (zi)",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage (zi)",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage (zi)",
+                                                                    "as.factor(drug_class)" ~ "Drug Class (zi)",
+                                                                    "patient_id.sd__(Intercept)" ~ "Random Effects (Intercept) (zi)"),
+                                                                  estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                                  pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+mixed_model_CMG_global_zeroi_table_total <- tbl_stack(
+  list(mixed_model_CMG_global_zeroi_table_cond, 
+       mixed_model_CMG_global_zeroi_table_zi))
+
+mixed_model_CMG_global_zeroi1_table_total <- tbl_stack(
+  list(mixed_model_CMG_global_zeroi1_table_cond, 
+       mixed_model_CMG_global_zeroi1_table_zi))
+
+
+mixed_model_CMG_global_zeroi_final_table <- tbl_merge(
+  list(mixed_model_CMG_global_zeroi_univ_final_table,
+       mixed_model_CMG_global_zeroi_table_total,
+       mixed_model_CMG_global_zeroi1_table_total),
+       tab_spanner = c("**Univariable Model**",
+                  "**Multivariable Full Model**", 
+                  "**Multivariable Optimized Model**"))
+
+mixed_model_CMG_global_zeroi_final_table <- mixed_model_CMG_global_zeroi_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Global - Continuous Multiple Interval Measure of Medication Gaps (CMG)</p>**
+**<p>Negative Binomial Zero-Inflated Mixed Effects Model</p>** (9782 Observations/6388 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**RR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "ci_1","ci_2","ci_3") ~ "RR: relative risk; aRR: adjusted relative risk; zi: zero-inflation model; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3"))
+
+# Optimized Models
+mixed_model_CMG_optimized_models__cond <- tbl_merge(list(mixed_model_CMG_anticoagulants_zeroi2_table_cond, mixed_model_CMG_antidiabetics_zeroi2_table_cond, mixed_model_CMG_antihiperlipidemic_zeroi3_table_cond, mixed_model_CMG_global_zeroi1_table_cond), 
+  tab_spanner = c("**Anticoagulants**", "**Antidiabetics**", "**Antihiperlipidemics**", "**Global**"))
+
+mixed_model_CMG_optimized_models_zi <- tbl_merge(list(mixed_model_CMG_anticoagulants_zeroi2_table_zi, mixed_model_CMG_antidiabetics_zeroi2_table_zi, mixed_model_CMG_antihiperlipidemic_zeroi3_table_zi, mixed_model_CMG_global_zeroi1_table_zi), 
+  tab_spanner = c("**Anticoagulants**", "**Antidiabetics**", "**Antihiperlipidemics**", "**Global**"))
+
+
+mixed_model_CMG_optimized_models__cond <- mixed_model_CMG_optimized_models__cond %>% 
+  modify_table_body(
+    ~.x %>%
+      arrange(desc(variable == "patient_id.sd__(Intercept)")) %>% 
+      arrange(desc(variable == "as.factor(drug_class)")) %>%
+      arrange(desc(variable == "as.factor(antidepressant_use)")) %>%
+      arrange(desc(variable == "as.factor(generic_usage)")) %>%
+      arrange(desc(variable == "as.factor(family_type)")) %>%
+      arrange(desc(variable == "as.factor(nuts_ii)")) %>%
+      arrange(desc(variable == "as.factor(age_group)")) %>%
+      arrange(desc(variable == "as.factor(gender)")) %>%
+      arrange(desc(variable == "as.factor(avrg_numb_drugs_refill)")) %>%
+      arrange(desc(variable == "as.factor(avrg_fin_sup_week)")) %>%
+      arrange(desc(variable == "as.factor(pharmacy_loyalty)"))) 
+
+mixed_model_CMG_optimized_models_zi <- mixed_model_CMG_optimized_models_zi %>% 
+  modify_table_body(
+    ~.x %>%
+      arrange(desc(variable == "patient_id.sd__(Intercept)")) %>% 
+      arrange(desc(variable == "as.factor(drug_class)")) %>%
+      arrange(desc(variable == "as.factor(antidepressant_use)")) %>%
+      arrange(desc(variable == "as.factor(generic_usage)")) %>%
+      arrange(desc(variable == "as.factor(family_type)")) %>%
+      arrange(desc(variable == "as.factor(nuts_ii)")) %>%
+      arrange(desc(variable == "as.factor(age_group)")) %>%
+      arrange(desc(variable == "as.factor(gender)")) %>%
+      arrange(desc(variable == "as.factor(avrg_numb_drugs_refill)")) %>%
+      arrange(desc(variable == "as.factor(avrg_fin_sup_week)")) %>%
+      arrange(desc(variable == "as.factor(pharmacy_loyalty)"))) 
+
+mixed_model_CMG_optimized_models_table <- tbl_stack(
+  list(mixed_model_CMG_optimized_models__cond, 
+       mixed_model_CMG_optimized_models_zi))
+
+mixed_model_CMG_optimized_models_table <- mixed_model_CMG_optimized_models_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Continuous Multiple Interval Measure of Medication Gaps (CMG)</p>**
+**<p>Negative Binomial Zero-Inflated Mixed Effects Models - Optimized</p>**") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**aRR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aRR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aRR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**",
+                      estimate_4 = "**aRR**",
+                      ci_4 = "**95% CI**",
+                      p.value_4 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "estimate_4", "ci_1","ci_2","ci_3", "ci_4") ~ "aRR: adjusted relative risk; zi: zero-inflation model; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3", "ci_4")) 
+
+mixed_model_CMG_anticoagulants_zeroi_final_table
+mixed_model_CMG_antidiabetics_zeroi_final_table
+mixed_model_CMG_antihiperlipidemic_zeroi_final_table
+mixed_model_CMG_global_zeroi_final_table
+mixed_model_CMG_optimized_models_table
+
+#' 
+#' ### Survival Analysis
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Survival Tables
+surv_table1 <-
+  survfit(Surv(time_to_event, discontinuation) ~ 1, data=global_patients_final) %>%
+  tbl_survfit(times = c(180,270,360),
+              estimate_fun = purrr::partial(style_percent, digits = 2)) 
+
+surv_table2 <-
+  survfit(Surv(time_to_event, discontinuation) ~ drug_class, data=global_patients_final) %>%
+  tbl_survfit(times = c(180,270,360),
+              label = list("drug_class" ~ "Drug Class"),
+              estimate_fun = purrr::partial(style_percent, digits = 2)) 
+
+surv_table_final <-
+  tbl_stack(list(surv_table1, surv_table2)) %>%  
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "anticoagulants" & variable == "drug_class" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "drug_class" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "drug_class" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Percentage of patients who hadn't discontinued medication (%)</p>**") %>% 
+        modify_header(
+                      label = "**Group**",
+                      stat_1 = "**6 Months**",
+                      stat_2 = "**9 Months**",
+                      stat_3 = "**12 Months**") %>% 
+  modify_footnote(update = c("stat_1","stat_2", "stat_3") ~ "95% confidence interval.", 
+                  abbreviation = TRUE)
+  
+  
+# Kaplan-Meier Curves with Log-Rank (Mantel-Haenszel) Tests  
+# Graphics with "Overall Survival" and by  Drug-Class
+surv_plot_km <- list(surv_global_km, surv_global_km_drug)
+
+kaplan_meyer_curves_all <- 
+  ggsurvplot_combine(surv_plot_km, 
+                   data = global_patients_final, 
+                   fun = "pct", 
+                   conf.int = TRUE,
+                   conf.int.style = "step",
+                   conf.int.alpha = 1,
+                   censor = FALSE,
+                   legend.title = "Groups",
+                   legend.labs = c("Global", "Anticoagulants", "Antidiabetics", "Antihiperlipidemics"),
+                   xlab = "Time (days)", 
+                   ylab = "Survival Probability (%)", 
+                   legend = "bottom",
+                   title = "Kaplan-Meier Curves",
+                   pval = TRUE,
+                   pval.size = 4,
+                   pval.coord = c(1000, 70),
+                   pval.method = TRUE,
+                   pval.method.coord = c(770, 70), 
+                   surv.median.line = c("v"),
+                   ggtheme = theme_minimal() +  theme(plot.title = element_text(hjust = 0.5, face = "bold")))
+
+surv_table_final
+km_drugs
+kaplan_meyer_curves_all
+
+# Mixed Effects Cox Regression Models
+# Anticoagulants
+anticoagulants_cox_model_table <- tbl_regression(anticoagulants_cox_model, 
+                                                       exponentiate = TRUE,
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+anticoagulants_cox_model_final_table <- tbl_merge(list(anticoagulants_cox_model_univ_table_final, anticoagulants_cox_model_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full/Optimized Model**"))
+
+
+anticoagulants_cox_model_final_table <- anticoagulants_cox_model_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Anticoagulants - Mixed Effects Cox Models</p>** (1410 Observations/1174 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**HR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aHR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "ci_1","ci_2") ~ "HR: hazard ratio; aHR: adjusted hazard ratio; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2"))
+
+
+
+# Antidiabetics 
+antidiabetics_cox_model_table <- tbl_regression(antidiabetics_cox_model, 
+                                                       exponentiate = TRUE,
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+
+antidiabetics_cox_model_final_table <- tbl_merge(list(antidiabetics_cox_model_univ_table_final, antidiabetics_cox_model_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full/Optimized Model**"))
+
+
+antidiabetics_cox_model_final_table <- antidiabetics_cox_model_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antidiabetics - Mixed Effects Cox Models</p>** (2489 Observations/2142 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**HR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aHR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "ci_1", "ci_2") ~ "HR: hazard ratio; aHR: adjusted hazard ratio; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2"))
+
+# Antihiperlipidemics 
+antihiperlipidemics_cox_model_table <- tbl_regression(antihiperlipidemics_cox_model, 
+                                                       exponentiate = TRUE,
+                                                       tidy_fun = broom.helpers::tidy_parameters, 
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+antihiperlipidemics_cox_model_final_table <- tbl_merge(list(antihiperlipidemics_cox_model_univ_table_final, antihiperlipidemics_cox_model_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full/Optimized Model**"))
+
+
+antihiperlipidemics_cox_model_final_table <- antihiperlipidemics_cox_model_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Antihiperlipidemics - Mixed Effects Cox Models</p>** (6179 Observations/5218 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**HR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aHR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "ci_1", "ci_2") ~ "HR: hazard ratio; aHR: adjusted hazard ratio; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2"))
+
+# Global
+global_cox_model_table <- tbl_regression(global_cox_model, 
+                                                       exponentiate = TRUE, 
+                                                       tidy_fun = broom.helpers::tidy_parameters,
+                                                       label = list("as.factor(pharmacy_loyalty)" ~ "Pharmacy Loyalty",
+                                                                    "as.factor(avrg_fin_sup_week)" ~ "Average Financial Support (€/week) - Quintiles",
+                                                                    "as.factor(avrg_numb_drugs_refill)" ~ "Average Number Drugs per Visit",
+                                                                    "as.factor(gender)" ~ "Sex",
+                                                                    "as.factor(age_group)" ~ "Age Group",
+                                                                    "as.factor(nuts_ii)" ~ "NUTS II",
+                                                                    "as.factor(family_type)" ~ "Type of Family",
+                                                                    "as.factor(generic_usage)" ~ "Generic Usage",
+                                                                    "as.factor(antidepressant_use)" ~ "Antidepressant Usage",
+                                                                    "as.factor(drug_class)" ~ "Drug Class"),
+                                                       estimate_fun = purrr::partial(style_ratio, digits = 2),
+                                                       pvalue_fun = purrr::partial(style_sigfig, digits = 2))
+
+global_cox_model_final_table <- tbl_merge(list(global_cox_model_univ_table_final, global_cox_model_table), 
+  tab_spanner = c("**Univariable Model**", "**Multivariable Full/Optimized Model**"))
+
+
+global_cox_model_final_table <- global_cox_model_final_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p>Global - Mixed Effects Cox Models</p>** (10078 Observations/6508 Patients)") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**HR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aHR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "ci_1", "ci_2") ~ "HR: hazard ratio; aHR: adjusted hazard ratio; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2"))  
+
+# Optimized Models
+
+cox_optimized_models_table <- tbl_merge(list(anticoagulants_cox_model_table, antidiabetics_cox_model_table, antihiperlipidemics_cox_model_table, global_cox_model_table), 
+  tab_spanner = c("**Anticoagulants**", "**Antidiabetics**", "**Antihiperlipidemics**", "**Global**"))
+
+cox_optimized_models_table <- cox_optimized_models_table %>% 
+  modify_table_body(~.x %>% 
+      mutate(label  = case_when(label == "0" & variable == "as.factor(pharmacy_loyalty)" ~ "<100%",
+                                label == "1" & variable == "as.factor(pharmacy_loyalty)" ~ "100%",
+                                label == "1" & variable == "as.factor(avrg_fin_sup_week)" ~ "1st quintile",
+                                label == "2" & variable == "as.factor(avrg_fin_sup_week)" ~ "2nd quintile",
+                                label == "3" & variable == "as.factor(avrg_fin_sup_week)" ~ "3rd quintile",
+                                label == "4" & variable == "as.factor(avrg_fin_sup_week)" ~ "4th quintile",
+                                label == "5" & variable == "as.factor(avrg_fin_sup_week)" ~ "5th quintile",
+                                label == "0" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "<5 Drugs",
+                                label == "1" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Polypharmacy (>=5 and <10)",
+                                label == "2" & variable == "as.factor(avrg_numb_drugs_refill)" ~ "Excessive Polypharmacy (>=10)",
+                                label == "1" & variable == "as.factor(gender)" ~ "Male",
+                                label == "0" & variable == "as.factor(gender)" ~ "Female",
+                                label == "1" & variable == "as.factor(age_group)" ~ "<45 years",
+                                label == "2" & variable == "as.factor(age_group)" ~ "45-54 years",
+                                label == "3" & variable == "as.factor(age_group)" ~ "55-64 years",
+                                label == "4" & variable == "as.factor(age_group)" ~ "65-74 years",
+                                label == "5" & variable == "as.factor(age_group)" ~ "75-84 years",
+                                label == "6" & variable == "as.factor(age_group)" ~ ">85 years",
+                                label == "0" & variable == "as.factor(nuts_ii)" ~ "Norte",
+                                label == "1" & variable == "as.factor(nuts_ii)" ~ "Centro",
+                                label == "2" & variable == "as.factor(nuts_ii)" ~ "Área Metropolitana de Lisboa",
+                                label == "3" & variable == "as.factor(nuts_ii)" ~ "Alentejo",
+                                label == "4" & variable == "as.factor(nuts_ii)" ~ "Algarve",
+                                label == "5" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma dos Açores",
+                                label == "6" & variable == "as.factor(nuts_ii)" ~ "Região Autónoma da Madeira",
+                                label == "0" & variable == "as.factor(family_type)" ~ "Lone individual",
+                                label == "1" & variable == "as.factor(family_type)" ~ "Couple without children",
+                                label == "2" & variable == "as.factor(family_type)" ~ "Couple with children",
+                                label == "3" & variable == "as.factor(family_type)" ~ "Single parent family",
+                                label == "4" & variable == "as.factor(family_type)" ~ " Multifamily household",
+                                label == "0" & variable == "as.factor(generic_usage)" ~ "No",
+                                label == "1" & variable == "as.factor(generic_usage)" ~ "Yes",
+                                label == "0" & variable == "as.factor(antidepressant_use)" ~ "No",
+                                label == "1" & variable == "as.factor(antidepressant_use)" ~ "Yes",
+                                label == "anticoagulants" & variable == "as.factor(drug_class)" ~ "Anticoagulants",
+                                label == "antidiabetics" & variable == "as.factor(drug_class)" ~ "Antidiabetics",
+                                label == "antihiperlipidemics" & variable == "as.factor(drug_class)" ~ "Antihiperlipidemics",
+                                TRUE ~ label))) %>% 
+       modify_caption("**<p> Mixed Effects Cox Models - Optimized</p>**") %>% 
+        modify_header(label = "**Variable**",
+                      estimate_1 = "**aHR**",
+                      ci_1 = "**95% CI**",
+                      p.value_1 = "**p-value**",
+                      estimate_2 = "**aHR**",
+                      ci_2 = "**95% CI**",
+                      p.value_2 = "**p-value**",
+                      estimate_3 = "**aHR**",
+                      ci_3 = "**95% CI**",
+                      p.value_3 = "**p-value**",
+                      estimate_4 = "**aHR**",
+                      ci_4 = "**95% CI**",
+                      p.value_4 = "**p-value**") %>% 
+  modify_footnote(update = c("estimate_1","estimate_2", "estimate_3", "estimate_4", "ci_1","ci_2","ci_3", "ci_4") ~ "aHR: adjusted hazard ratio; 95% confidence intervals presented.", 
+                  abbreviation = TRUE) %>% 
+  modify_column_hide(c("ci_1", "ci_2", "ci_3", "ci_4")) 
+
+cox_optimized_models_table <- cox_optimized_models_table %>% 
+  modify_table_body(
+    ~.x %>%
+      arrange(desc(variable == "as.factor(drug_class)")) %>%
+      arrange(desc(variable == "as.factor(antidepressant_use)")) %>%
+      arrange(desc(variable == "as.factor(generic_usage)")) %>%
+      arrange(desc(variable == "as.factor(family_type)")) %>%
+      arrange(desc(variable == "as.factor(nuts_ii)")) %>%
+      arrange(desc(variable == "as.factor(age_group)")) %>%
+      arrange(desc(variable == "as.factor(gender)")) %>%
+      arrange(desc(variable == "as.factor(avrg_numb_drugs_refill)")) %>%
+      arrange(desc(variable == "as.factor(avrg_fin_sup_week)")) %>%
+      arrange(desc(variable == "as.factor(pharmacy_loyalty)")))
+
+
+anticoagulants_cox_model_final_table
+antidiabetics_cox_model_final_table
+antihiperlipidemics_cox_model_final_table
+global_cox_model_final_table
+cox_optimized_models_table
+
+#' 
+#' # Package References
+## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+library(report)
+cite_packages()
+
