@@ -35,7 +35,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 #' 
 ## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
 # Working Directory Setting
-setwd("C:/Users/Rdirectory")
+setwd("./")
 
 #' 
 #' # Datasets Import and Merge
@@ -50,7 +50,7 @@ library(tidyr)
 
 # Files need to previously be saved as CSV files
 # Import and special character cleanse 
-BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv", 
+BD_Consumos_abem_2016_2020 <- read_delim("./DataBases/BD_Consumos_abem_2016-2020.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Cod_Receita = col_character(), 
         `Valor_ABEM (euros)` = col_double(), 
@@ -62,7 +62,7 @@ BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv",
 BD_Consumos_abem_2016_2020 <- clean_names(BD_Consumos_abem_2016_2020)
 
 
-BD_Consumos_abem_2021 <- read_delim("C:/Users/Rdirectory/DataFile2.csv", 
+BD_Consumos_abem_2021 <- read_delim("./DataBases/BD_Consumos_abem_2021.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Data_Dispensa = col_date(format = "%d/%m/%Y"), 
         Benef_Ano_Nascimento = col_date(format = "%Y")), 
@@ -75,7 +75,7 @@ BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 BD_Consumos_abem_2016_2021 <- bind_rows(BD_Consumos_abem_2016_2020,BD_Consumos_abem_2021)
 
 
-BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv", 
+BD_Beneficiarios_abem_2016_2021 <- read_delim("./DataBases/BD_Beneficiarios_abem_2016-2021.csv", 
     ";", col_types = cols(`Ano de Nascimento` = col_date(format = "%Y"), 
         `Data Início` = col_date(format = "%d/%m/%Y"), 
         `Data Fim` = col_date(format = "%d/%m/%Y"), 
@@ -88,7 +88,7 @@ BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv
 BD_Beneficiarios_abem_2016_2021 <- clean_names(BD_Beneficiarios_abem_2016_2021)
 
 
-Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv", 
+Lista_Codigos_ATC_DCI <- read_delim("./DataBases/Lista_Codigos_ATC_DCI.csv", 
     ";", col_types = cols(`PDDD \n(=DDD OMS/ Dose do medicamento)` = col_double(), 
         `TTD \n(=quantidade que caracteriza a embalagem / PDDD)` = col_double()), 
     locale = locale(decimal_mark = ","), 
@@ -97,7 +97,7 @@ Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv",
 Lista_Codigos_ATC_DCI <- clean_names(Lista_Codigos_ATC_DCI)
 
 
-NUTS_II <- read_delim("C:/Users/Rdirectory/NUTS II.csv", 
+NUTS_II <- read_delim("./DataBases/NUTS II.csv", 
     ";", quote = "\\\"", escape_backslash = TRUE, 
     col_types = cols(`regiao` = col_character(), 
         municipio = col_character()), locale = locale(), 
@@ -531,7 +531,7 @@ anticoagulant_patients_final <- anticoagulant_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(anticoagulant_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Anticoagulants_final.csv", row.names = FALSE)
+write.csv2(anticoagulant_patients_final, "./Outputs\\Anticoagulants_final.csv", row.names = FALSE)
 
 #' 
 #' ## Antidiabetics
@@ -911,7 +911,7 @@ antidiabetic_patients_final <- antidiabetic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antidiabetic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antidiabetics_final.csv", row.names = FALSE)
+write.csv2(antidiabetic_patients_final, "./Outputs\\Antidiabetics_final.csv", row.names = FALSE)
 
 
 #' 
@@ -1290,7 +1290,7 @@ antihiperlipidemic_patients_final <- antihiperlipidemic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antihiperlipidemic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antihiperlipidemics_final.csv", row.names = FALSE)
+write.csv2(antihiperlipidemic_patients_final, "./Outputs\\Antihiperlipidemics_final.csv", row.names = FALSE)
 
 #' 
 #' ## Global
@@ -1336,7 +1336,7 @@ antihiperlipidemic_patients_final_global <- antihiperlipidemic_patients_final %>
 global_patients_final <- bind_rows(anticoagulant_patients_final_global, antidiabetic_patients_final_global, antihiperlipidemic_patients_final_global)
 
 # CSV file export
-write.csv2(global_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Global_final.csv", row.names = FALSE)
+write.csv2(global_patients_final, "./Outputs\\Global_final.csv", row.names = FALSE)
 
 #' 
 #' # Variable Dictionary

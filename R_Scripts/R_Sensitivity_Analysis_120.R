@@ -1,6 +1,6 @@
 #' ---
 #' title: "Abem Program | Adhesion to Medication <br> Research Report"
-#' subtitle: "Sensitivity Analysis (60)"
+#' subtitle: "Sensitivity Analysis (120)"
 #' author: José Ramalho^[National School of Public Health - UNL, jpr.ramalho@ensp.unl.pt]
 #' date: "`r format(Sys.time(), '%d %B, %Y')`" 
 #' output:
@@ -35,7 +35,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 #' 
 ## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
 # Working Directory Setting
-setwd("C:/Users/Rdirectory")
+setwd("./")
 
 #' 
 #' # Datasets Import and Merge
@@ -50,7 +50,7 @@ library(tidyr)
 
 # Files need to previously be saved as CSV files
 # Import and special character cleanse 
-BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv", 
+BD_Consumos_abem_2016_2020 <- read_delim("./DataBases/BD_Consumos_abem_2016-2020.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Cod_Receita = col_character(), 
         `Valor_ABEM (euros)` = col_double(), 
@@ -62,7 +62,7 @@ BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv",
 BD_Consumos_abem_2016_2020 <- clean_names(BD_Consumos_abem_2016_2020)
 
 
-BD_Consumos_abem_2021 <- read_delim("C:/Users/Rdirectory/DataFile2.csv", 
+BD_Consumos_abem_2021 <- read_delim("./DataBases/BD_Consumos_abem_2021.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Data_Dispensa = col_date(format = "%d/%m/%Y"), 
         Benef_Ano_Nascimento = col_date(format = "%Y")), 
@@ -75,7 +75,7 @@ BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 BD_Consumos_abem_2016_2021 <- bind_rows(BD_Consumos_abem_2016_2020,BD_Consumos_abem_2021)
 
 
-BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv", 
+BD_Beneficiarios_abem_2016_2021 <- read_delim("./DataBases/BD_Beneficiarios_abem_2016-2021.csv", 
     ";", col_types = cols(`Ano de Nascimento` = col_date(format = "%Y"), 
         `Data Início` = col_date(format = "%d/%m/%Y"), 
         `Data Fim` = col_date(format = "%d/%m/%Y"), 
@@ -88,7 +88,7 @@ BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv
 BD_Beneficiarios_abem_2016_2021 <- clean_names(BD_Beneficiarios_abem_2016_2021)
 
 
-Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv", 
+Lista_Codigos_ATC_DCI <- read_delim("./DataBases/Lista_Codigos_ATC_DCI.csv", 
     ";", col_types = cols(`PDDD \n(=DDD OMS/ Dose do medicamento)` = col_double(), 
         `TTD \n(=quantidade que caracteriza a embalagem / PDDD)` = col_double()), 
     locale = locale(decimal_mark = ","), 
@@ -97,7 +97,7 @@ Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv",
 Lista_Codigos_ATC_DCI <- clean_names(Lista_Codigos_ATC_DCI)
 
 
-NUTS_II <- read_delim("C:/Users/Rdirectory/NUTS II.csv", 
+NUTS_II <- read_delim("./DataBases/NUTS II.csv", 
     ";", quote = "\\\"", escape_backslash = TRUE, 
     col_types = cols(`regiao` = col_character(), 
         municipio = col_character()), locale = locale(), 
@@ -244,11 +244,11 @@ anticoagulants_consumos <- anticoagulants_consumos %>%
   mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
   filter(switch_atc < 2)
 
-# Censuring observations for participants who discontinued medication (>60 day between two prescriptions or >60 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+# Censuring observations for participants who discontinued medication (>120 day between two prescriptions or >120 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
 anticoagulants_consumos <- anticoagulants_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(event_occ = ifelse(data_dispensa >= 60 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 120 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
   mutate(event_occ_sum = cumsum(event_occ)) %>%
   mutate(event_occ = max(event_occ)) %>% 
   filter(event_occ_sum < 1)
@@ -257,7 +257,7 @@ anticoagulants_consumos_last <- anticoagulants_consumos %>%
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
   filter(row_number()==n() & event_occ == 0) %>% 
-  mutate(event_occ = ifelse(data_fim >= 60 + data_fim_dias_cobertos, 1, 0))
+  mutate(event_occ = ifelse(data_fim >= 120 + data_fim_dias_cobertos, 1, 0))
   
 anticoagulants_consumos_top <- anticoagulants_consumos %>% 
   group_by(cod_beneficiario, period) %>%
@@ -531,7 +531,7 @@ anticoagulant_patients_final <- anticoagulant_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(anticoagulant_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Anticoagulants_final.csv", row.names = FALSE)
+write.csv2(anticoagulant_patients_final, "./Outputs\\Anticoagulants_final.csv", row.names = FALSE)
 
 #' 
 #' ## Antidiabetics
@@ -626,11 +626,11 @@ antidiabetics_consumos <- antidiabetics_consumos %>%
   mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
   filter(switch_atc < 2)
 
-# Censuring observations for participants who discontinued medication (>60 day between two prescriptions or >60 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+# Censuring observations for participants who discontinued medication (>120 day between two prescriptions or >120 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
 antidiabetics_consumos <- antidiabetics_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(event_occ = ifelse(data_dispensa >= 60 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 120 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
   mutate(event_occ_sum = cumsum(event_occ)) %>%
   mutate(event_occ = max(event_occ)) %>% 
   filter(event_occ_sum < 1)
@@ -639,7 +639,7 @@ antidiabetics_consumos_last <- antidiabetics_consumos %>%
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
   filter(row_number()==n() & event_occ == 0) %>% 
-  mutate(event_occ = ifelse(data_fim >= 60 + data_fim_dias_cobertos, 1, 0))
+  mutate(event_occ = ifelse(data_fim >= 120 + data_fim_dias_cobertos, 1, 0))
   
 antidiabetics_consumos_top <- antidiabetics_consumos %>% 
   group_by(cod_beneficiario, period) %>%
@@ -911,7 +911,7 @@ antidiabetic_patients_final <- antidiabetic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antidiabetic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antidiabetics_final.csv", row.names = FALSE)
+write.csv2(antidiabetic_patients_final, "./Outputs\\Antidiabetics_final.csv", row.names = FALSE)
 
 
 #' 
@@ -1005,11 +1005,11 @@ antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>%
   mutate(switch_atc = cumsum(ifelse(atc == lag(atc) | is.na(lag(atc)), 0, 1))) %>% 
   filter(switch_atc < 2)
 
-# Censuring observations for participants who discontinued medication (>60 day between two prescriptions or >60 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
+# Censuring observations for participants who discontinued medication (>120 day between two prescriptions or >120 days between last prescription and leaving the program). Coding of variable discontinuation (Discontinued Medication = 1, Didn't discontinued =0)
 antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(event_occ = ifelse(data_dispensa >= 60 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
+  mutate(event_occ = ifelse(data_dispensa >= 120 + lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa)), 1, 0)) %>% 
   mutate(event_occ_sum = cumsum(event_occ)) %>%
   mutate(event_occ = max(event_occ)) %>% 
   filter(event_occ_sum < 1)
@@ -1018,7 +1018,7 @@ antihiperlipidemics_consumos_last <- antihiperlipidemics_consumos %>%
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
   filter(row_number()==n() & event_occ == 0) %>% 
-  mutate(event_occ = ifelse(data_fim >= 60 + data_fim_dias_cobertos, 1, 0))
+  mutate(event_occ = ifelse(data_fim >= 120 + data_fim_dias_cobertos, 1, 0))
   
 antihiperlipidemics_consumos_top <- antihiperlipidemics_consumos %>% 
   group_by(cod_beneficiario, period) %>%
@@ -1290,7 +1290,7 @@ antihiperlipidemic_patients_final <- antihiperlipidemic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antihiperlipidemic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antihiperlipidemics_final.csv", row.names = FALSE)
+write.csv2(antihiperlipidemic_patients_final, "./Outputs\\Antihiperlipidemics_final.csv", row.names = FALSE)
 
 #' 
 #' ## Global
@@ -1336,7 +1336,7 @@ antihiperlipidemic_patients_final_global <- antihiperlipidemic_patients_final %>
 global_patients_final <- bind_rows(anticoagulant_patients_final_global, antidiabetic_patients_final_global, antihiperlipidemic_patients_final_global)
 
 # CSV file export
-write.csv2(global_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Global_final.csv", row.names = FALSE)
+write.csv2(global_patients_final, "./Outputs\\Global_final.csv", row.names = FALSE)
 
 #' 
 #' # Variable Dictionary
@@ -3024,7 +3024,7 @@ mixed_model_CMG_antihiperlipidemics_zeroi_univ6 <- glmmTMB(num_days_CMG ~ as.fac
 
 mixed_model_CMG_antihiperlipidemics_zeroi_univ7 <- glmmTMB(num_days_CMG ~ as.factor(family_type) + offset(log(time_to_event)) + (1 | patient_id), 
                                                  data = antihiperlipidemic_patients_final_no_outliers_CMG, 
-                                                 family = nbinom2(link = "log"), # error with nbinom1
+                                                 family = nbinom1(link = "log"), 
                                                  ziformula = ~ 1 + (1 | patient_id)) 
 
 mixed_model_CMG_antihiperlipidemics_zeroi_univ8 <- glmmTMB(num_days_CMG ~ as.factor(generic_usage) + offset(log(time_to_event)) + (1 | patient_id), 

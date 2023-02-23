@@ -1,6 +1,5 @@
 #' ---
 #' title: "Abem Program | Adhesion to Medication <br> Research Report"
-#' subtitle: "Sensitivity Analysis (0.2)"
 #' author: José Ramalho^[National School of Public Health - UNL, jpr.ramalho@ensp.unl.pt]
 #' date: "`r format(Sys.time(), '%d %B, %Y')`" 
 #' output:
@@ -35,7 +34,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 #' 
 ## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
 # Working Directory Setting
-setwd("C:/Users/Rdirectory")
+setwd("./")
 
 #' 
 #' # Datasets Import and Merge
@@ -50,7 +49,7 @@ library(tidyr)
 
 # Files need to previously be saved as CSV files
 # Import and special character cleanse 
-BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv", 
+BD_Consumos_abem_2016_2020 <- read_delim("./DataBases/BD_Consumos_abem_2016-2020.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Cod_Receita = col_character(), 
         `Valor_ABEM (euros)` = col_double(), 
@@ -62,12 +61,12 @@ BD_Consumos_abem_2016_2020 <- read_delim("C:/Users/Rdirectory/DataFile1.csv",
 BD_Consumos_abem_2016_2020 <- clean_names(BD_Consumos_abem_2016_2020)
 
 
-BD_Consumos_abem_2021 <- read_delim("C:/Users/Rdirectory/DataFile2.csv", 
+BD_Consumos_abem_2021 <- read_delim("./DataBases/BD_Consumos_abem_2021.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Data_Dispensa = col_date(format = "%d/%m/%Y"), 
         Benef_Ano_Nascimento = col_date(format = "%Y")), 
     locale = locale(decimal_mark = ","), 
-    na = "empty", trim_ws = TRUE)
+    na = "empty", trim_ws = TRUE, )
 
 BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 
@@ -75,7 +74,7 @@ BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 BD_Consumos_abem_2016_2021 <- bind_rows(BD_Consumos_abem_2016_2020,BD_Consumos_abem_2021)
 
 
-BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv", 
+BD_Beneficiarios_abem_2016_2021 <- read_delim("./DataBases/BD_Beneficiarios_abem_2016-2021.csv", 
     ";", col_types = cols(`Ano de Nascimento` = col_date(format = "%Y"), 
         `Data Início` = col_date(format = "%d/%m/%Y"), 
         `Data Fim` = col_date(format = "%d/%m/%Y"), 
@@ -88,7 +87,7 @@ BD_Beneficiarios_abem_2016_2021 <- read_delim("C:/Users/Rdirectory/DataFile3.csv
 BD_Beneficiarios_abem_2016_2021 <- clean_names(BD_Beneficiarios_abem_2016_2021)
 
 
-Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv", 
+Lista_Codigos_ATC_DCI <- read_delim("./DataBases/Lista_Codigos_ATC_DCI.csv", 
     ";", col_types = cols(`PDDD \n(=DDD OMS/ Dose do medicamento)` = col_double(), 
         `TTD \n(=quantidade que caracteriza a embalagem / PDDD)` = col_double()), 
     locale = locale(decimal_mark = ","), 
@@ -97,7 +96,7 @@ Lista_Codigos_ATC_DCI <- read_delim("C:/Users/Rdirectory/DataFile4.csv",
 Lista_Codigos_ATC_DCI <- clean_names(Lista_Codigos_ATC_DCI)
 
 
-NUTS_II <- read_delim("C:/Users/Rdirectory/NUTS II.csv", 
+NUTS_II <- read_delim("./DataBases/NUTS II.csv", 
     ";", quote = "\\\"", escape_backslash = TRUE, 
     col_types = cols(`regiao` = col_character(), 
         municipio = col_character()), locale = locale(), 
@@ -271,7 +270,7 @@ anticoagulants_consumos <- bind_rows(anticoagulants_consumos_top, anticoagulants
 
 # Period of observation 
   # From first prescription until last (if remained until study end or left the program) 
-  # From fist prescription until 1.2 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+  # From fist prescription until 1.3 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
 # participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
 count_observations <- count(anticoagulants_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
   filter(num_dispensas_per >= 2)
@@ -284,7 +283,7 @@ anticoagulant_patients <- anticoagulant_patients %>%
   mutate(obs_period = ifelse(
                               first(anticoagulants_consumos$event_occ[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) == 0,
                               last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) - first(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]),
-                              (last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) + 1.2 * last(anticoagulants_consumos$num_dias_cobertos[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period])) - first(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))) %>% 
+                              (last(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]) + 1.3 * last(anticoagulants_consumos$num_dias_cobertos[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period])) - first(anticoagulants_consumos$data_dispensa[identificacao_codificado == anticoagulants_consumos$cod_beneficiario & period == anticoagulants_consumos$period]))) %>% 
   filter(obs_period >=90) %>%  
   mutate_at(vars("obs_period"), list(~round(., 0))) 
 
@@ -302,12 +301,12 @@ anticoagulant_patients <- anticoagulant_patients %>%
   mutate_at(vars("CMA_num"), list(~round(., 0))) 
   
 
-# Number of gap days in medication (coefficient = 0.2)
+# Number of gap days in medication (coefficient = 0.3)
 anticoagulants_consumos <- anticoagulants_consumos %>% 
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.2 * lag(num_dias_cobertos, n = 1, default = 1)),
-                           data_dispensa - (1.2 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.3 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.3 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
                                                                                                                   
 # CMG numerator 
 anticoagulant_patients <- anticoagulant_patients %>%
@@ -409,7 +408,7 @@ anticoagulants_consumos_calc <- anticoagulants_consumos %>%
 BD_Consumos_abem_2016_2021_anticoagulants <- BD_Consumos_abem_2016_2021_anticoagulants %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
-                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.2 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.3 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
 
 anticoagulants_consumos_calc1 <- anticoagulants_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
@@ -441,7 +440,7 @@ BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_2 %>%
 BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_anticoagulants2 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
-                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.2 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.3 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_anticoagulants2 <- BD_Consumos_abem_2016_2021_anticoagulants2 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= anticoagulants_consumos_calc1$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc1$cod_beneficiario & period == anticoagulants_consumos_calc1$period])
@@ -487,7 +486,7 @@ BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_2 %>%
 BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_anticoagulants3 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period],
-                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.2 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
+                                  anticoagulants_consumos_calc$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period] + 1.3 * anticoagulants_consumos_calc$num_dias_cobertos[cod_beneficiario == anticoagulants_consumos_calc$cod_beneficiario & period == anticoagulants_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_anticoagulants3 <- BD_Consumos_abem_2016_2021_anticoagulants3 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= anticoagulants_consumos_calc1$data_dispensa[cod_beneficiario == anticoagulants_consumos_calc1$cod_beneficiario & period == anticoagulants_consumos_calc1$period])
@@ -531,7 +530,7 @@ anticoagulant_patients_final <- anticoagulant_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(anticoagulant_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Anticoagulants_final.csv", row.names = FALSE)
+write.csv2(anticoagulant_patients_final, "./Outputs\\Anticoagulants_final.csv", row.names = FALSE)
 
 #' 
 #' ## Antidiabetics
@@ -653,7 +652,7 @@ antidiabetics_consumos <- bind_rows(antidiabetics_consumos_top, antidiabetics_co
 
 # Period of observation 
   # From first prescription until last (if remained until study end or left the program) 
-  # From fist prescription until 1.2 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+  # From fist prescription until 1.3 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
 # participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
 count_observations <- count(antidiabetics_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
   filter(num_dispensas_per >= 2)
@@ -666,7 +665,7 @@ antidiabetic_patients <- antidiabetic_patients %>%
   mutate(obs_period = ifelse(
                               first(antidiabetics_consumos$event_occ[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) == 0,
                               last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) - first(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]),
-                              (last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) + 1.2 * last(antidiabetics_consumos$num_dias_cobertos[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period])) - first(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))) %>% 
+                              (last(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]) + 1.3 * last(antidiabetics_consumos$num_dias_cobertos[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period])) - first(antidiabetics_consumos$data_dispensa[identificacao_codificado == antidiabetics_consumos$cod_beneficiario & period == antidiabetics_consumos$period]))) %>% 
   filter(obs_period >=90) %>% 
   mutate_at(vars("obs_period"), list(~round(., 0))) 
 
@@ -683,12 +682,12 @@ antidiabetic_patients <- antidiabetic_patients %>%
   mutate(CMA_num = ifelse(CMA_num > obs_period, obs_period, CMA_num)) %>% 
   mutate_at(vars("CMA_num"), list(~round(., 0)))
 
-# Number of gap days in medication (coefficient = 0.2)
+# Number of gap days in medication (coefficient = 0.3)
 antidiabetics_consumos <- antidiabetics_consumos %>% 
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.2 * lag(num_dias_cobertos, n = 1, default = 1)),
-                           data_dispensa - (1.2 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.3 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.3 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
                                                                                                                   
 # CMG numerator  
 antidiabetic_patients <- antidiabetic_patients %>%
@@ -789,7 +788,7 @@ antidiabetics_consumos_calc <- antidiabetics_consumos %>%
 BD_Consumos_abem_2016_2021_antidiabetics <- BD_Consumos_abem_2016_2021_antidiabetics %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
-                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.2 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.3 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
 
 antidiabetics_consumos_calc1 <- antidiabetics_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
@@ -821,7 +820,7 @@ BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_2 %>%
 BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_antidiabetics2 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
-                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.2 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.3 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_antidiabetics2 <- BD_Consumos_abem_2016_2021_antidiabetics2 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= antidiabetics_consumos_calc1$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc1$cod_beneficiario & period == antidiabetics_consumos_calc1$period])
@@ -867,7 +866,7 @@ BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_2 %>%
 BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_antidiabetics3 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period],
-                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.2 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
+                                  antidiabetics_consumos_calc$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period] + 1.3 * antidiabetics_consumos_calc$num_dias_cobertos[cod_beneficiario == antidiabetics_consumos_calc$cod_beneficiario & period == antidiabetics_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_antidiabetics3 <- BD_Consumos_abem_2016_2021_antidiabetics3 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= antidiabetics_consumos_calc1$data_dispensa[cod_beneficiario == antidiabetics_consumos_calc1$cod_beneficiario & period == antidiabetics_consumos_calc1$period])
@@ -911,7 +910,7 @@ antidiabetic_patients_final <- antidiabetic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antidiabetic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antidiabetics_final.csv", row.names = FALSE)
+write.csv2(antidiabetic_patients_final, "./Outputs\\Antidiabetics_final.csv", row.names = FALSE)
 
 
 #' 
@@ -1032,7 +1031,7 @@ antihiperlipidemics_consumos <- bind_rows(antihiperlipidemics_consumos_top, anti
 
 # Period of observation 
   # From first prescription until last (if remained until study end or left the program) 
-  # From fist prescription until 1.2 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
+  # From fist prescription until 1.3 times number of days covered by last prescription (prescription + grace period) after last prescription (if discontinued medication)
 # participants who did not fulfill inclusion criteria excluded (2 or more prescriptions and at least 90 days of observation)
 count_observations <- count(antihiperlipidemics_consumos, cod_beneficiario, period, name = "num_dispensas_per") %>% 
   filter(num_dispensas_per >= 2)
@@ -1045,7 +1044,7 @@ antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
   mutate(obs_period = ifelse(
                               first(antihiperlipidemics_consumos$event_occ[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) == 0,
                               last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) - first(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]),
-                              (last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) + 1.2 * last(antihiperlipidemics_consumos$num_dias_cobertos[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period])) - first(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))) %>% 
+                              (last(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]) + 1.3 * last(antihiperlipidemics_consumos$num_dias_cobertos[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period])) - first(antihiperlipidemics_consumos$data_dispensa[identificacao_codificado == antihiperlipidemics_consumos$cod_beneficiario & period == antihiperlipidemics_consumos$period]))) %>% 
   filter(obs_period >=90) %>%  
   mutate_at(vars("obs_period"), list(~round(., 0))) 
 
@@ -1062,12 +1061,12 @@ antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
   mutate(CMA_num = ifelse(CMA_num > obs_period, obs_period, CMA_num)) %>% 
   mutate_at(vars("CMA_num"), list(~round(., 0))) 
 
-# Number of gap days in medication (coefficient = 0.2)
+# Number of gap days in medication (coefficient = 0.3)
 antihiperlipidemics_consumos <- antihiperlipidemics_consumos %>% 
   group_by(cod_beneficiario, period) %>%
   arrange(data_dispensa, .by_group = TRUE) %>% 
-  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.2 * lag(num_dias_cobertos, n = 1, default = 1)),
-                           data_dispensa - (1.2 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
+  mutate(gap_days = ifelse((data_dispensa - lag(data_fim_dias_cobertos, n = 1, default = first(data_dispensa))) >= (0.3 * lag(num_dias_cobertos, n = 1, default = 1)),
+                           data_dispensa - (1.3 * lag(num_dias_cobertos, n = 1, default = 1) + lag(data_dispensa, n = 1, default = first(data_dispensa))), 0))
                                                                                                                   
 # CMG numerator  
 antihiperlipidemic_patients <- antihiperlipidemic_patients %>%
@@ -1168,7 +1167,7 @@ antihiperlipidemics_consumos_calc <- antihiperlipidemics_consumos %>%
 BD_Consumos_abem_2016_2021_antihiperlipidemics <- BD_Consumos_abem_2016_2021_antihiperlipidemics %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
-                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.2 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.3 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
 
 antihiperlipidemics_consumos_calc1 <- antihiperlipidemics_consumos %>% 
   group_by(cod_beneficiario, period) %>% 
@@ -1200,7 +1199,7 @@ BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_2 
 BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_antihiperlipidemics2 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
-                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.2 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.3 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_antihiperlipidemics2 <- BD_Consumos_abem_2016_2021_antihiperlipidemics2 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= antihiperlipidemics_consumos_calc1$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc1$cod_beneficiario & period == antihiperlipidemics_consumos_calc1$period])
@@ -1246,7 +1245,7 @@ BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_2 
 BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_antihiperlipidemics3 %>% 
   mutate(data_fim_observ = as.Date(ifelse(event_occurrence == 0,
                                   antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period],
-                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.2 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
+                                  antihiperlipidemics_consumos_calc$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period] + 1.3 * antihiperlipidemics_consumos_calc$num_dias_cobertos[cod_beneficiario == antihiperlipidemics_consumos_calc$cod_beneficiario & period == antihiperlipidemics_consumos_calc$period]))) 
 
 BD_Consumos_abem_2016_2021_antihiperlipidemics3 <- BD_Consumos_abem_2016_2021_antihiperlipidemics3 %>% 
   filter(data_dispensa <= data_fim_observ & data_dispensa >= antihiperlipidemics_consumos_calc1$data_dispensa[cod_beneficiario == antihiperlipidemics_consumos_calc1$cod_beneficiario & period == antihiperlipidemics_consumos_calc1$period])
@@ -1290,7 +1289,7 @@ antihiperlipidemic_patients_final <- antihiperlipidemic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antihiperlipidemic_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Antihiperlipidemics_final.csv", row.names = FALSE)
+write.csv2(antihiperlipidemic_patients_final, "./Outputs\\Antihiperlipidemics_final.csv", row.names = FALSE)
 
 #' 
 #' ## Global
@@ -1336,7 +1335,7 @@ antihiperlipidemic_patients_final_global <- antihiperlipidemic_patients_final %>
 global_patients_final <- bind_rows(anticoagulant_patients_final_global, antidiabetic_patients_final_global, antihiperlipidemic_patients_final_global)
 
 # CSV file export
-write.csv2(global_patients_final, "C:/Users/ze__2/Desktop/Estágio de Investigação/6. Bases de Dados\\Global_final.csv", row.names = FALSE)
+write.csv2(global_patients_final, "./Outputs\\Global_final.csv", row.names = FALSE)
 
 #' 
 #' # Variable Dictionary

@@ -14,6 +14,14 @@ A one-at-a-time sensitivity analysis was performed for the main input variables 
   
 Research paper will be available soon.</p> 
 
+### Running Instructions:
+<p align="justify">To run the code place the missing databases in the folder with the same name. You can either run the R Scripts or R Markdown files directly from your CLI using the following commands:</p>
+
+```
+Rscript ".\R_Scripts\FILE_NAME.R"
+Rscript -e "rmarkdown::render('./Rmd_Files/FILE_NAME.Rmd')"
+``` 
+
 ### Where to ask questions:
 Feel free to post any bugs, questions, and opinions in [Adherence-to-Medication issues list.](https://github.com/JPRRamalho/Adherence-to-Medication/issues) 
 <p align="justify">Save e-mail for urgent issues.</p>

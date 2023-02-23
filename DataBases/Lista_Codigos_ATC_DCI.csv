@@ -1,0 +1,538 @@
+﻿Cod_Medicamento;DCI;FORMA_FARM;DOSAGEM;EMBALAGEM;QUANT_TOT;QUANT_TOT_UNIDADE;GRUPO_HOM_COD;ATC;DDD OMS;"DDD OMS 
+(unidade de medida)";"PDDD 
+(=DDD OMS/ Dose do medicamento)";"TTD 
+(=quantidade que caracteriza a embalagem / PDDD)"
+5107206;Acarbose;Comprimido;50 mg;Blister - 50 unidade(s);50;unidade(s);GH0660;A10BF01;0,3;g;6;8,333333333
+5107214;Acarbose;Comprimido;100 mg;Blister - 50 unidade(s);50;unidade(s);GH0662;A10BF01;0,3;g;3;16,66666667
+5110119;Acarbose;Comprimido;50 mg;Blister - 60 unidade(s);60;unidade(s);GH0660;A10BF01;0,3;g;6;10
+5110150;Acarbose;Comprimido;100 mg;Blister - 60 unidade(s);60;unidade(s);GH0662;A10BF01;0,3;g;3;20
+5110218;Acarbose;Comprimido;50 mg;Blister - 60 unidade(s);60;unidade(s);GH0660;A10BF01;0,3;g;6;10
+5111505;Acarbose;Comprimido;50 mg;Blister - 50 unidade(s);50;unidade(s);GH0660;A10BF01;0,3;g;6;8,333333333
+5111513;Acarbose;Comprimido;100 mg;Blister - 50 unidade(s);50;unidade(s);GH0662;A10BF01;0,3;g;3;16,66666667
+5111539;Acarbose;Comprimido;50 mg;Blister - 50 unidade(s);50;unidade(s);GH0660;A10BF01;0,3;g;6;8,333333333
+5111547;Acarbose;Comprimido;100 mg;Blister - 50 unidade(s);50;unidade(s);GH0662;A10BF01;0,3;g;3;16,66666667
+5168075;Acarbose;Comprimido;50 mg;Blister - 50 unidade(s);50;unidade(s);GH0660;A10BF01;0,3;g;6;8,333333333
+9775015;Acarbose;Comprimido;50 mg;Blister - 50 unidade(s);50;unidade(s);GH0660;A10BF01;0,3;g;6;8,333333333
+9775023;Acarbose;Comprimido;100 mg;Blister - 50 unidade(s);50;unidade(s);GH0662;A10BF01;0,3;g;3;16,66666667
+9893503;Acenocumarol;Comprimido;4 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;B01AA07;5;mg;1,25;16
+5587779;Alogliptina;Comprimido revestido por película;12.5 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH04;25;mg;2;14
+5587829;Alogliptina;Comprimido revestido por película;25 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH04;25;mg;1;28
+5582655;Amlodipina + Atorvastatina;Comprimido revestido por película;5 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX03;-;-;1;30
+5582762;Amlodipina + Atorvastatina;Comprimido revestido por película;5 mg + 20 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX03;-;-;1;30
+5582911;Amlodipina + Atorvastatina;Comprimido revestido por película;10 mg + 20 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX03;-;-;1;30
+5389846;Apixabano;Comprimido revestido por película;2.5 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;B01AF02;10;mg;4;5
+5389853;Apixabano;Comprimido revestido por película;2.5 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AF02;10;mg;4;15
+5487418;Apixabano;Comprimido revestido por película;5 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;B01AF02;10;mg;2;10
+5487434;Apixabano;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AF02;10;mg;2;30
+2535888;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5057674;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5057716;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5057740;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5059076;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5061064;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5061106;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5061130;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5069224;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5069422;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5069463;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5069539;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5129622;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0787;C10AA05;20;mg;1;56
+5257357;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0787;C10AA05;20;mg;1;56
+5260542;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5260559;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5260575;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5260617;Atorvastatina;Comprimido revestido por película;80 mg;Blister - 28 unidade(s);28;unidade(s);GH1197;C10AA05;20;mg;0,25;112
+5261615;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5261656;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5313309;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5317037;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5317052;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5317102;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5317136;Atorvastatina;Comprimido revestido por película;80 mg;Blister - 28 unidade(s);28;unidade(s);GH1197;C10AA05;20;mg;0,25;112
+5323340;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5323647;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5394176;Atorvastatina;;10 mg;Blister - 20 unidade(s);20;unidade(s);#N/D;C10AA05;20;mg;2;10
+5419528;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5427018;Atorvastatina;;10 mg;Blister - 56 unidade(s);56;unidade(s);#N/D;C10AA05;20;mg;2;28
+5427034;Atorvastatina;;20 mg;Blister - 28 unidade(s);28;unidade(s);#N/D;C10AA05;20;mg;1;28
+5427067;Atorvastatina;;40 mg;Blister - 28 unidade(s);28;unidade(s);#N/D;C10AA05;20;mg;0,5;56
+5434857;Atorvastatina;Comprimido revestido por película;10 mg;Frasco - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5434873;Atorvastatina;Comprimido revestido por película;20 mg;Frasco - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5434923;Atorvastatina;Comprimido revestido por película;40 mg;Frasco - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5616206;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5616222;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5616255;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5642822;Atorvastatina;Comprimido revestido por película;80 mg;Blister - 28 unidade(s);28;unidade(s);GH1197;C10AA05;20;mg;0,25;112
+5642830;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5642848;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5642863;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5678735;Atorvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0786;C10AA05;20;mg;2;28
+5678776;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5678800;Atorvastatina;Comprimido revestido por película;40 mg;Blister - 28 unidade(s);28;unidade(s);GH0788;C10AA05;20;mg;0,5;56
+5728142;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);#N/D;C10AA05;20;mg;1;28
+5728258;Atorvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0787;C10AA05;20;mg;1;28
+5628458;Atorvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5628672;Atorvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5628748;Atorvastatina + Ezetimiba;Comprimido revestido por película;40 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5628904;Atorvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;C10BA05;-;-;1;10
+5628912;Atorvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5629506;Atorvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5629662;Atorvastatina + Ezetimiba;Comprimido revestido por película;40 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5784541;Atorvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5784566;Atorvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5784608;Atorvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5814512;Atorvastatina + Ezetimiba;Cápsula;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5814520;Atorvastatina + Ezetimiba;Cápsula;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5814538;Atorvastatina + Ezetimiba;Cápsula;40 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5817671;Atorvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+5817945;Atorvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA05;-;-;1;30
+8508424;Bezafibrato;Comprimido revestido por película;200 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;C10AB02;0,6;g;3;6,666666667
+8508432;Bezafibrato;Comprimido revestido por película;200 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AB02;0,6;g;3;20
+8641902;Bezafibrato;Comprimido de libertação prolongada;400 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10AB02;0,6;g;1,5;20
+5586425;Canagliflozina;Comprimido revestido por película;100 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BK02;0,2;g;2;15
+5586466;Canagliflozina;Comprimido revestido por película;300 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BK02;0,2;g;0,666666667;45
+8747915;Ciprofibrato;Cápsula;100 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AB08;0,1;g;1;60
+5796669;Colestiramina;Pó para suspensão oral;4000 mg;Saqueta - 12 unidade(s);12;unidade(s);GH0000;C10AC01;14;g;3,5;3,428571429
+8314617;Colestiramina;Pó para suspensão oral;4000 mg;Saqueta - 20 unidade(s);20;unidade(s);GH0000;C10AC01;14;g;3,5;5,714285714
+5102124;Dabigatrano etexilato;Cápsula;75 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;B01AE07;0,3;g;4;2,5
+5102140;Dabigatrano etexilato;Cápsula;75 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AE07;0,3;g;4;15
+5102207;Dabigatrano etexilato;Cápsula;110 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AE07;0,3;g;2,727272727;22
+5398037;Dabigatrano etexilato;Cápsula;150 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AE07;0,3;g;2;30
+5487210;Dapagliflozina;Comprimido revestido por película;10 mg;Blister - 14 unidade(s);14;unidade(s);GH0000;A10BK01;10;mg;1;14
+5487228;Dapagliflozina;Comprimido revestido por película;10 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BK01;10;mg;1;28
+5764410;Dapagliflozina;Comprimido revestido por película;10 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BK01;10;mg;1;28
+5657903;Edoxabano;Comprimido revestido por película;15 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;B01AF03;60;mg;4;2,5
+5657929;Edoxabano;Comprimido revestido por película;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;B01AF03;60;mg;2;14
+5658000;Edoxabano;Comprimido revestido por película;60 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;B01AF03;60;mg;1;28
+5607403;Empagliflozina;Comprimido revestido por película;10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BK03;17,5;mg;1,75;17,14285714
+5607411;Empagliflozina;Comprimido revestido por película;10 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;A10BK03;17,5;mg;1,75;5,714285714
+5607429;Empagliflozina;Comprimido revestido por película;25 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BK03;17,5;mg;0,7;42,85714286
+5653860;Empagliflozina + Metformina;Comprimido revestido por película;12.5 mg + 1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BD20;-;-;2;30
+5653902;Empagliflozina + Metformina;Comprimido revestido por película;5 mg + 850 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BD20;-;-;2;30
+5653928;Empagliflozina + Metformina;Comprimido revestido por película;5 mg + 1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BD20;-;-;2;30
+5653944;Empagliflozina + Metformina;Comprimido revestido por película;12.5 mg + 850 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BD20;-;-;2;30
+5745765;Ertugliflozina;Comprimido revestido por película;5 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BK04;10;mg;2;14
+5745807;Ertugliflozina;Comprimido revestido por película;15 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BK04;10;mg;0,666666667;42
+5746177;Ertugliflozina + Metformina;Comprimido revestido por película;2.5 mg + 1000 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;A10BD23;-;-;2;28
+5746219;Ertugliflozina + Metformina;Comprimido revestido por película;7.5 mg + 1000 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;A10BD23;-;-;2;28
+4367587;Ezetimiba;Comprimido;10 mg;Blister - 14 unidade(s);14;unidade(s);GH1124;C10AX09;10;mg;1;14
+4367785;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5587555;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5623939;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5677539;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5679758;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5685946;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5720743;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5730528;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5731823;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5731914;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5731948;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5731971;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5732052;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5732102;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5733837;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5740048;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5755202;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+5762869;Ezetimiba;Comprimido;10 mg;Blister - 28 unidade(s);28;unidade(s);GH1125;C10AX09;10;mg;1;28
+2459980;Fenofibrato;Cápsula;200 mg;Blister - 30 unidade(s);30;unidade(s);GH0782;C10AB05;0,2;g (micronizado);1;30
+3268182;Fenofibrato;Cápsula;267 mg;Blister - 30 unidade(s);30;unidade(s);GH0553;C10AB05;0,2;g (micronizado);0,74906367;40,05
+4814984;Fenofibrato;Cápsula;200 mg;Blister - 30 unidade(s);30;unidade(s);GH0782;C10AB05;0,2;g (micronizado);1;30
+5412788;Fenofibrato;Comprimido revestido por película;145 mg;Blister - 20 unidade(s);20;unidade(s);GH1006;C10AB05;0,2;g (micronizado);1;20
+5412986;Fenofibrato;Comprimido revestido por película;145 mg;Blister - 50 unidade(s);50;unidade(s);GH1007;C10AB05;0,2;g (micronizado);1;50
+5538889;Fenofibrato;Cápsula;267 mg;Blister - 30 unidade(s);30;unidade(s);GH0553;C10AB05;0,2;g (micronizado);0,74906367;40,05
+5589247;Fenofibrato;Comprimido;145 mg;Blister - 50 unidade(s);50;unidade(s);GH1007;C10AB05;0,2;g (micronizado);1;50
+5589262;Fenofibrato;Comprimido;145 mg;Blister - 20 unidade(s);20;unidade(s);GH1006;C10AB05;0,2;g (micronizado);1;20
+5687975;Fenofibrato;Comprimido revestido por película;145 mg;Blister - 50 unidade(s);50;unidade(s);GH1007;C10AB05;0,2;g (micronizado);1;50
+5090345;Fluvastatina;Cápsula;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0698;C10AA04;60;mg;1,5;37,33333333
+5109129;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5113832;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5123948;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 60 unidade(s);60;unidade(s);GH0699;C10AA04;60;mg;0,75;80
+5124037;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5124136;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5127808;Fluvastatina;Cápsula;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0696;C10AA04;60;mg;3;9,333333333
+5127840;Fluvastatina;Cápsula;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0698;C10AA04;60;mg;1,5;37,33333333
+5178736;Fluvastatina;Cápsula;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AA04;60;mg;1,5;40
+5219415;Fluvastatina;Cápsula;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0696;C10AA04;60;mg;3;9,333333333
+5219456;Fluvastatina;Cápsula;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0698;C10AA04;60;mg;1,5;37,33333333
+5247457;Fluvastatina;Cápsula;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0698;C10AA04;60;mg;1,5;37,33333333
+5310826;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5339601;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;C10AA04;60;mg;0,75;74,66666667
+5496294;Fluvastatina;Comprimido de libertação prolongada;80 mg;Blister - 56 unidade(s);56;unidade(s);GH0699;C10AA04;60;mg;0,75;74,66666667
+5082607;Gemfibrozil;Comprimido revestido por película;600 mg;Blister - 60 unidade(s);60;unidade(s);GH0664;C10AB04;1,2;g;2;30
+8651216;Gemfibrozil;Cápsula;300 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AB04;1,2;g;4;15
+8750018;Gemfibrozil;Comprimido revestido por película;600 mg;Blister - 60 unidade(s);60;unidade(s);GH0664;C10AB04;1,2;g;2;30
+5715487;Glibenclamida;Comprimido;2.5 mg;Blister - 60 unidade(s);60;unidade(s);GH0512;A10BB01;10;mg;4;15
+5715685;Glibenclamida;Comprimido;5 mg;Blister - 60 unidade(s);60;unidade(s);GH0513;A10BB01;10;mg;2;30
+8270173;Glibenclamida;Comprimido;5 mg;Blister - 60 unidade(s);60;unidade(s);GH0513;A10BB01;10;mg;2;30
+3516283;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+3983590;Gliclazida;Comprimido;80 mg;Blister - 60 unidade(s);60;unidade(s);GH0194;A10BB09;60;mg;2;30
+4392080;Gliclazida;Comprimido;80 mg;Blister - 60 unidade(s);60;unidade(s);GH0194;A10BB09;60;mg;2;30
+5032339;Gliclazida;Comprimido de libertação prolongada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5052725;Gliclazida;Comprimido de libertação prolongada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5067772;Gliclazida;Comprimido de libertação prolongada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5081468;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BB09;60;mg;2;30
+5081633;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 20 unidade(s);20;unidade(s);GH0630;A10BB09;60;mg;2;10
+5081658;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5081807;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5210216;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5250261;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;A10BB09;60;mg;1;10
+5250279;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5321724;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BB09;60;mg;2;30
+5400296;Gliclazida;Comprimido;80 mg;Blister - 60 unidade(s);60;unidade(s);GH0194;A10BB09;60;mg;2;30
+5465638;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BB09;60;mg;1;30
+5465661;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5465711;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5574975;Gliclazida;Comprimido de libertação prolongada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5603444;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5625173;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+5625215;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5643754;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5666235;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5666300;Gliclazida;Comprimido de libertação modificada;60 mg;Blister - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5695622;Gliclazida;Comprimido de libertação modificada;90 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BB09;60;mg;0,666666667;45
+5697958;Gliclazida;Comprimido de libertação modificada;60 mg;Frasco - 30 unidade(s);30;unidade(s);GH0937;A10BB09;60;mg;1;30
+5770474;Gliclazida;Comprimido de libertação modificada;30 mg;Blister - 60 unidade(s);60;unidade(s);GH0631;A10BB09;60;mg;2;30
+3827995;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+3828092;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+3892692;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+3892791;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+5112552;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;1;60
+5112578;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;0,5;120
+5641881;Glimepirida;Comprimido;1 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;2;30
+5642285;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;1;60
+5642681;Glimepirida;Comprimido;3 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;0,666666667;90
+5643085;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;0,5;120
+5685888;Glimepirida;Comprimido;1 mg;Blister - 60 unidade(s);60;unidade(s);GH0321;A10BB12;2;mg;2;30
+5685987;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+5686084;Glimepirida;Comprimido;3 mg;Blister - 60 unidade(s);60;unidade(s);GH0323;A10BB12;2;mg;0,666666667;90
+5686183;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+5688064;Glimepirida;Comprimido;1 mg;Blister - 60 unidade(s);60;unidade(s);GH0321;A10BB12;2;mg;2;30
+5688072;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+5688114;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+5720685;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+5721287;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+5723358;Glimepirida;Comprimido;1 mg;Blister - 60 unidade(s);60;unidade(s);GH0321;A10BB12;2;mg;2;30
+5723366;Glimepirida;Comprimido;2 mg;Blister - 60 unidade(s);60;unidade(s);GH0322;A10BB12;2;mg;1;60
+5723374;Glimepirida;Comprimido;3 mg;Blister - 60 unidade(s);60;unidade(s);GH0323;A10BB12;2;mg;0,666666667;90
+5723408;Glimepirida;Comprimido;4 mg;Blister - 60 unidade(s);60;unidade(s);GH0324;A10BB12;2;mg;0,5;120
+5916788;Glimepirida;;1 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;2;30
+5916887;Glimepirida;;2 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;1;60
+5917083;Glimepirida;;4 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BB12;2;mg;0,5;120
+8311001;Glipizida;Comprimido;5 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BB07;10;mg;2;30
+5404041;Linagliptina;Comprimido revestido por película;5 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;A10BH05;5;mg;1;30
+3337698;Lovastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;C10AA02;45;mg;2,25;26,66666667
+3542396;Lovastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0210;C10AA02;45;mg;2,25;26,66666667
+4354387;Lovastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0210;C10AA02;45;mg;2,25;26,66666667
+4355681;Lovastatina;Comprimido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AA02;45;mg;1,125;53,33333333
+5570841;Lovastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0210;C10AA02;45;mg;2,25;26,66666667
+3639184;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+3786480;Metformina;;850 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BA02;2;g;2,352941176;25,5
+4849881;Metformina;Comprimido revestido por película;500 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;A10BA02;2;g;4;5
+4850087;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BA02;2;g;4;15
+4850681;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BA02;2;g;2,352941176;25,5
+4985685;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5022439;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5062401;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5062443;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5063631;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5080262;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5171509;Metformina;Comprimido revestido por película;500 mg;Blister - 20 unidade(s);20;unidade(s);GH0328;A10BA02;2;g;4;5
+5171517;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5171525;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5171533;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5174586;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5205828;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5205836;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5248000;Metformina;Comprimido revestido por película;850 mg;Blister - 20 unidade(s);20;unidade(s);GH0213;A10BA02;2;g;2,352941176;8,5
+5304423;Metformina;Comprimido revestido por película;500 mg;Blister - 20 unidade(s);20;unidade(s);GH0328;A10BA02;2;g;4;5
+5304431;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5304456;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5304472;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5390786;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5434667;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5434741;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5435409;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5459540;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5460209;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5563689;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5572714;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5572722;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5572730;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5581178;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BA02;2;g;4;15
+5581301;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BA02;2;g;2;30
+5679113;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5679121;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5719380;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BA02;2;g;2,352941176;25,5
+5719687;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;A10BA02;2;g;2;30
+5731476;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5731500;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5755673;Metformina;Comprimido revestido por película;500 mg;Blister - 60 unidade(s);60;unidade(s);GH0329;A10BA02;2;g;4;15
+5755707;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+5755715;Metformina;Comprimido revestido por película;1000 mg;Blister - 60 unidade(s);60;unidade(s);GH0413;A10BA02;2;g;2;30
+5786587;Metformina;Comprimido revestido por película;850 mg;Blister - 60 unidade(s);60;unidade(s);GH0214;A10BA02;2;g;2,352941176;25,5
+8050807;Metformina;Comprimido revestido por película;500 mg;Blister - 50 unidade(s);50;unidade(s);GH0329;A10BA02;2;g;4;12,5
+9546820;Metformina;Comprimido;700 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;A10BA02;2;g;2,857142857;7
+9546838;Metformina;Comprimido;700 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;A10BA02;2;g;2,857142857;21
+5604020;Metformina + Canagliflozina;Comprimido revestido por película;1000 mg + 50 mg;Frasco - 60 unidade(s);60;unidade(s);GH0000;A10BD16;-;-;3;20
+3581089;Nateglinida;Comprimido revestido por película;120 mg;Blister - 84 unidade(s);84;unidade(s);GH0000;A10BX03;0,36;g;3;28
+5392006;Pioglitazona;Comprimido;15 mg;Blister - 28 unidade(s);28;unidade(s);GH0835;A10BG03;30;mg;2;14
+5392014;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5392022;Pioglitazona;Comprimido;45 mg;Blister - 28 unidade(s);28;unidade(s);GH0837;A10BG03;30;mg;0,666666667;42
+5398532;Pioglitazona;Comprimido;15 mg;Blister - 28 unidade(s);28;unidade(s);GH0835;A10BG03;30;mg;2;14
+5398557;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5398565;Pioglitazona;Comprimido;45 mg;Blister - 28 unidade(s);28;unidade(s);GH0837;A10BG03;30;mg;0,666666667;42
+5398672;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5413919;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5435821;Pioglitazona;Comprimido;15 mg;Blister - 28 unidade(s);28;unidade(s);GH0835;A10BG03;30;mg;2;14
+5435847;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5435862;Pioglitazona;Comprimido;45 mg;Blister - 28 unidade(s);28;unidade(s);GH0837;A10BG03;30;mg;0,666666667;42
+5451315;Pioglitazona;Comprimido;15 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BG03;30;mg;2;14
+5451349;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BG03;30;mg;1;28
+5481106;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5730338;Pioglitazona;Comprimido;30 mg;Blister - 28 unidade(s);28;unidade(s);GH0836;A10BG03;30;mg;1;28
+5730346;Pioglitazona;Comprimido;45 mg;Blister - 28 unidade(s);28;unidade(s);GH0837;A10BG03;30;mg;0,666666667;42
+5324538;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5324553;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5324561;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5324603;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5324629;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5324637;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5782313;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5782321;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5782339;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5788831;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5788856;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5788948;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5789250;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5789318;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5789326;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5789334;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5789839;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5789847;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5791470;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5791504;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5791512;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5795166;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5795174;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5795208;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+5795224;Pitavastatina;Comprimido revestido por película;1 mg;Blister - 28 unidade(s);28;unidade(s);GH1187;C10AA08;2;mg;2;14
+5795232;Pitavastatina;Comprimido revestido por película;2 mg;Blister - 28 unidade(s);28;unidade(s);GH1188;C10AA08;2;mg;1;28
+5795240;Pitavastatina;Comprimido revestido por película;4 mg;Blister - 28 unidade(s);28;unidade(s);GH1189;C10AA08;2;mg;0,5;56
+4140182;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+4398095;Pravastatina;Comprimido;10 mg;Frasco - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+4398392;Pravastatina;Comprimido;20 mg;Frasco - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+4398699;Pravastatina;Comprimido;40 mg;Frasco - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+4399291;Pravastatina;Comprimido;20 mg;Frasco - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+4399895;Pravastatina;Comprimido;10 mg;Frasco - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+4736781;Pravastatina;Comprimido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5026547;Pravastatina;Comprimido;10 mg;Frasco - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5026562;Pravastatina;Comprimido;20 mg;Frasco - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5026604;Pravastatina;Comprimido;40 mg;Frasco - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5132444;Pravastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5132451;Pravastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5246178;Pravastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0358;C10AA03;30;mg;3;18,66666667
+5246210;Pravastatina;Comprimido revestido por película;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0227;C10AA03;30;mg;1,5;37,33333333
+5246228;Pravastatina;Comprimido revestido por película;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0360;C10AA03;30;mg;0,75;74,66666667
+5285481;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5304274;Pravastatina;Comprimido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5304316;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5304324;Pravastatina;Comprimido;40 mg;Blister - 20 unidade(s);20;unidade(s);GH0359;C10AA03;30;mg;0,75;26,66666667
+5304332;Pravastatina;Comprimido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5327580;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5328182;Pravastatina;Comprimido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5338462;Pravastatina;Comprimido;10 mg;Frasco - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5339205;Pravastatina;Comprimido;20 mg;Frasco - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5339270;Pravastatina;Comprimido;40 mg;Frasco - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5373519;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5436886;Pravastatina;Comprimido;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0358;C10AA03;30;mg;3;18,66666667
+5436985;Pravastatina;Comprimido;20 mg;Blister - 20 unidade(s);20;unidade(s);GH0226;C10AA03;30;mg;1,5;13,33333333
+5437181;Pravastatina;Comprimido;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0227;C10AA03;30;mg;1,5;37,33333333
+5437488;Pravastatina;Comprimido;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0360;C10AA03;30;mg;0,75;74,66666667
+5470117;Pravastatina;Comprimido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5470133;Pravastatina;Comprimido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0227;C10AA03;30;mg;1,5;40
+5470141;Pravastatina;Comprimido;40 mg;Blister - 20 unidade(s);20;unidade(s);GH0359;C10AA03;30;mg;0,75;26,66666667
+5470158;Pravastatina;Comprimido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0360;C10AA03;30;mg;0,75;80
+5692553;Pravastatina;Comprimido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5788385;Pravastatina;Comprimido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0358;C10AA03;30;mg;3;20
+5431952;Pravastatina + Fenofibrato;Cápsula;40 mg + 160 mg;Frasco - 30 unidade(s);30;unidade(s);GH0000;C10BA03;-;-;1;30
+5132956;Rivaroxabano;Comprimido revestido por película;10 mg;Blister - 10 unidade(s);10;unidade(s);GH0000;B01AF01;20;mg;2;5
+5132964;Rivaroxabano;Comprimido revestido por película;10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;B01AF01;20;mg;2;15
+5423918;Rivaroxabano;Comprimido revestido por película;15 mg;Blister - 14 unidade(s);14;unidade(s);GH0000;B01AF01;20;mg;1,333333333;10,5
+5423934;Rivaroxabano;Comprimido revestido por película;15 mg;Blister - 42 unidade(s);42;unidade(s);GH0000;B01AF01;20;mg;1,333333333;31,5
+5424403;Rivaroxabano;Comprimido revestido por película;20 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;B01AF01;20;mg;1;28
+5565866;Rivaroxabano;Comprimido revestido por película;2.5 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;B01AF01;20;mg;8;7
+4356689;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 20 unidade(s);20;unidade(s);GH1113;C10AA07;10;mg;1;20
+4357281;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+4358388;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+4361788;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+4362885;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5291364;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5470604;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5470729;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5473731;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5569488;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5639810;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 56 unidade(s) - 5 mg;56;unidade(s);GH1112;C10AA07;10;mg;2;28
+5639844;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s) - 10 mg;56;unidade(s);GH1114;C10AA07;10;mg;1;56
+5639869;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 28 unidade(s) - 20 mg;28;unidade(s);GH1115;C10AA07;10;mg;0,5;56
+5642723;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5642756;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5642772;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5646278;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5646310;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5646336;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5662853;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5662861;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5662903;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5662978;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5663018;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5663976;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5664016;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5664057;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5665377;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 56 unidade(s);56;unidade(s);GH1112;C10AA07;10;mg;2;28
+5665427;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH1114;C10AA07;10;mg;1;56
+5665922;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 20 unidade(s);20;unidade(s);GH1111;C10AA07;10;mg;2;10
+5665930;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5665971;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5666078;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5679048;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5679063;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5679071;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5701958;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5702949;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5702964;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5705033;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5705074;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5706635;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5714258;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5714308;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5714324;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5715644;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5715677;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5715719;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5726625;Rosuvastatina;Comprimido revestido por película;5 mg;Blister - 60 unidade(s);60;unidade(s);GH1112;C10AA07;10;mg;2;30
+5726633;Rosuvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH1114;C10AA07;10;mg;1;60
+5726641;Rosuvastatina;Comprimido revestido por película;20 mg;Blister - 30 unidade(s);30;unidade(s);GH1115;C10AA07;10;mg;0,5;60
+5620364;Rosuvastatina + Ezetimiba;Cápsula;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;0;0
+5620463;Rosuvastatina + Ezetimiba;Cápsula;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;0;0
+5718754;Rosuvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10BA06;-;-;1;60
+5741822;Rosuvastatina + Ezetimiba;Comprimido;5 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;C10BA06;-;-;1;28
+5741830;Rosuvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;C10BA06;-;-;1;28
+5741848;Rosuvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;C10BA06;-;-;1;28
+5760871;Rosuvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5761051;Rosuvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5761069;Rosuvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5772850;Rosuvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5784020;Rosuvastatina + Ezetimiba;Comprimido revestido por película;10 mg + 10 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10BA06;-;-;1;60
+5784046;Rosuvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10BA06;-;-;1;60
+5795810;Rosuvastatina + Ezetimiba;Cápsula;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5796347;Rosuvastatina + Ezetimiba;Cápsula;5 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5796354;Rosuvastatina + Ezetimiba;Cápsula;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5796701;Rosuvastatina + Ezetimiba;Cápsula;5 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5796719;Rosuvastatina + Ezetimiba;Cápsula;10 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5796727;Rosuvastatina + Ezetimiba;Cápsula;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5811757;Rosuvastatina + Ezetimiba;Comprimido revestido por película;20 mg + 10 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA06;-;-;1;30
+5814223;Rosuvastatina + Ezetimiba;Comprimido revestido por película;5 mg + 10 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10BA06;-;-;1;60
+5756812;Rosuvastatina + Perindopril + Indapamida;Comprimido revestido por película;10 mg + 4 mg + 1.25 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX13;-;-;1;30
+5756820;Rosuvastatina + Perindopril + Indapamida;Comprimido revestido por película;10 mg + 8 mg + 2.5 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX13;-;-;1;30
+5756838;Rosuvastatina + Perindopril + Indapamida;Comprimido revestido por película;20 mg + 4 mg + 1.25 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX13;-;-;1;30
+5756846;Rosuvastatina + Perindopril + Indapamida;Comprimido revestido por película;20 mg + 8 mg + 2.5 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BX13;-;-;1;30
+5227616;Saxagliptina;Comprimido revestido por película;5 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH03;5;mg;1;28
+3117595;Sinvastatina;Comprimido revestido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+3603198;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 20 unidade(s);20;unidade(s);GH0127;C10AA01;30;mg;1,5;13,33333333
+3603396;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4012381;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4028486;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4028882;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+4157681;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+4207395;Sinvastatina;Comprimido revestido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4207593;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AA01;30;mg;1,5;40
+4214490;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;C10AA01;30;mg;0,75;80
+4332987;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0128;C10AA01;30;mg;1,5;37,33333333
+4473286;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+4477089;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4480885;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+4781381;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+4900080;Sinvastatina;Comprimido revestido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+4900981;Sinvastatina;Comprimido revestido;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+4901880;Sinvastatina;Comprimido revestido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+4961884;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+4988689;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 20 unidade(s);20;unidade(s);GH0127;C10AA01;30;mg;1,5;13,33333333
+4988887;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5071501;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5071527;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5077490;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5077755;Sinvastatina;Comprimido revestido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5133145;Sinvastatina;;20 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;C10AA01;30;mg;1,5;40
+5254677;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 56 unidade(s);56;unidade(s);GH0231;C10AA01;30;mg;3;18,66666667
+5254719;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 56 unidade(s);56;unidade(s);GH0128;C10AA01;30;mg;1,5;37,33333333
+5254727;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 56 unidade(s);56;unidade(s);GH0234;C10AA01;30;mg;0,75;74,66666667
+5338538;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5338561;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5338611;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5402102;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5423686;Sinvastatina;Comprimido revestido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AA01;30;mg;3;20
+5423793;Sinvastatina;Comprimido revestido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5423884;Sinvastatina;Comprimido revestido;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5439609;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5472196;Sinvastatina;Comprimido revestido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5504691;Sinvastatina;Comprimido revestido;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5589387;Sinvastatina;;40 mg;Blister - 60 unidade(s);60;unidade(s);#N/D;C10AA01;30;mg;0,75;80
+5731864;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5743513;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0234;C10AA01;30;mg;0,75;80
+5800586;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5914197;Sinvastatina;Comprimido revestido por película;40 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;C10AA01;30;mg;0,75;80
+5999487;Sinvastatina;Comprimido revestido por película;10 mg;Blister - 60 unidade(s);60;unidade(s);GH0231;C10AA01;30;mg;3;20
+5999586;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+8768739;Sinvastatina;Comprimido revestido por película;20 mg;Blister - 60 unidade(s);60;unidade(s);GH0128;C10AA01;30;mg;1,5;40
+5243480;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5243886;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5244280;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5245485;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5648829;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5709621;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5711841;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5729504;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Frasco - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5729512;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Frasco - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5729603;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Frasco - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5729744;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Frasco - 28 unidade(s);28;unidade(s);#N/D;C10BA02;-;-;1;28
+5739453;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5739461;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5755756;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5755830;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5755970;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5756069;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5756101;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5756127;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5756341;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5756457;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5756473;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5756515;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5756556;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5760806;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5760921;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5760939;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5762646;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5762661;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5762703;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5762729;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5762745;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5762760;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5766936;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5766944;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5773551;Sinvastatina + Ezetimiba;Comprimido;10 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1121;C10BA02;-;-;1;28
+5784335;Sinvastatina + Ezetimiba;Comprimido;20 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1122;C10BA02;-;-;1;28
+5784343;Sinvastatina + Ezetimiba;Comprimido;40 mg + 10 mg;Blister - 28 unidade(s);28;unidade(s);GH1123;C10BA02;-;-;1;28
+5579917;Sinvastatina + Fenofibrato;Comprimido revestido por película;20 mg + 145 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA04;-;-;1;30
+5579925;Sinvastatina + Fenofibrato;Comprimido revestido por película;40 mg + 145 mg;Blister - 30 unidade(s);30;unidade(s);GH0000;C10BA04;-;-;1;30
+5024518;Sitagliptina;Comprimido revestido por película;25 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;4;7
+5024542;Sitagliptina;Comprimido revestido por película;50 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;2;14
+5024575;Sitagliptina;Comprimido revestido por película;100 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;1;28
+5024625;Sitagliptina;Comprimido revestido por película;25 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;4;7
+5024658;Sitagliptina;Comprimido revestido por película;50 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;2;14
+5024674;Sitagliptina;Comprimido revestido por película;100 mg;Blister - 14 unidade(s);14;unidade(s);GH0000;A10BH01;0,1;g;1;14
+5024708;Sitagliptina;Comprimido revestido por película;100 mg;Blister - 28 unidade(s);28;unidade(s);GH0000;A10BH01;0,1;g;1;28
+8052902;Varfarina;Comprimido;5 mg;Blister - 20 unidade(s);20;unidade(s);GH0000;B01AA03;7,5;mg;1,5;13,33333333
+8052936;Varfarina;Comprimido;5 mg;Blister - 60 unidade(s);60;unidade(s);GH0000;B01AA03;7,5;mg;1,5;40
+5061239;Vildagliptina;Comprimido;50 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;A10BH02;0,1;g;2;28
+5159975;Vildagliptina;Comprimido;50 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;A10BH02;0,1;g;2;28
+5160247;Vildagliptina;Comprimido;50 mg;Blister - 56 unidade(s);56;unidade(s);GH0000;A10BH02;0,1;g;2;28
