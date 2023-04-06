@@ -1890,10 +1890,9 @@ mixed_model_CMG_anticoagulants_zeroi_univ_final_table
 ```
 
 
-##### Multivariable Models
+##### Multivariable Models CMA
 ```{r}
-# Multivariable Models
-# CMA
+# Multivariable Models - CMA
 mixed_model_CMA_anticoagulants <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                           data = anticoagulant_patients_final_no_outliers_CMA, 
                                           family = nbinom1(link = "log"))
@@ -1917,11 +1916,26 @@ kable(tidy(mixed_model_CMA_anticoagulants3, exponentiate = TRUE, conf.int = TRUE
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinm2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinm2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
+```
 
-# CMG
+<p>Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function (https://github.com/bbolker/broom.mixed/issues/108) in negative binomial regressions (correctly reported for regression with zero-inflated component). Thus they were computed using glmmTMB::confint() function using Wald method as visible below.</p>
+
+```{r}
+confint(mixed_model_CMA_anticoagulants3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+```
+
+##### Multivariable Models CMG
+```{r}
+# Multivariable Models - CMG
 mixed_model_CMG_anticoagulants <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                           data = anticoagulant_patients_final_no_outliers_CMG, 
                                           family = nbinom2(link = "log"))
@@ -2502,10 +2516,9 @@ mixed_model_CMG_antidiabetics_zeroi_univ_final_table
 ```
 
 
-##### Multivariable Models
+##### Multivariable Models CMA
 ```{r}
-# Multivariable Models
-# CMA
+# Multivariable Models - CMA
 mixed_model_CMA_antidiabetics <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                          data = antidiabetic_patients_final_no_outliers_CMA, 
                                          family = nbinom1(link = "log"))
@@ -2530,11 +2543,26 @@ kable(tidy(mixed_model_CMA_antidiabetics3, exponentiate = TRUE, conf.int = TRUE)
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC).
-             Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+             Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
+```
 
-# CMG
+<p>Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function (https://github.com/bbolker/broom.mixed/issues/108) in negative binomial regressions (correctly reported for regression with zero-inflated component). Thus they were computed using glmmTMB::confint() function using Wald method as visible below.</p>
+
+```{r}
+confint(mixed_model_CMA_antidiabetics3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+```
+
+##### Multivariable Models CMG
+```{r}
+# Multivariable Models - CMG
 mixed_model_CMG_antidiabetics <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                          data = antidiabetic_patients_final_no_outliers_CMG, 
                                          family = nbinom1(link = "log"))
@@ -3101,10 +3129,9 @@ mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table
 ```
 
 
-##### Multivariable Models
+##### Multivariable Models CMA
 ```{r}
-# Multivariable Models
-# CMA
+# Multivariable Models - CMA
 mixed_model_CMA_antihiperlipidemic <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                               data = antihiperlipidemic_patients_final_no_outliers_CMA, 
                                               family = nbinom1(link = "log"))
@@ -3124,11 +3151,26 @@ kable(tidy(mixed_model_CMA_antihiperlipidemic2, exponentiate = TRUE, conf.int = 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))        
+```
 
-# CMG
+<p>Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function (https://github.com/bbolker/broom.mixed/issues/108) in negative binomial regressions (correctly reported for regression with zero-inflated component). Thus they were computed using glmmTMB::confint() function using Wald method as visible below.</p>
+
+```{r}
+confint(mixed_model_CMA_antihiperlipidemic2, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+```
+
+##### Multivariable Models CMG
+```{r}
+# Multivariable Models - CMG
 mixed_model_CMG_antihiperlipidemic <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                               data = antihiperlipidemic_patients_final_no_outliers_CMG, 
                                               family = nbinom1(link = "log"))
@@ -3730,10 +3772,9 @@ mixed_model_CMG_global_zeroi_univ_final_table
 ```
 
 
-##### Multivariable Models
+##### Multivariable Models CMA
 ```{r}
-# Multivariable Models
-# CMA
+# Multivariable Models - CMA
 mixed_model_CMA_global <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
                                   data = global_patients_final_no_outliers_CMA, 
                                   family = nbinom1(link = "log"))
@@ -3749,11 +3790,26 @@ kable(tidy(mixed_model_CMA_global1, exponentiate = TRUE, conf.int = TRUE),
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",        
            footnote_as_chunk = T, title_format = c("italic", "underline"))
+```
 
-# CMG
+<p>Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function (https://github.com/bbolker/broom.mixed/issues/108) in negative binomial regressions (correctly reported for regression with zero-inflated component). Thus they were computed using glmmTMB::confint() function using Wald method as visible below.</p>
+
+```{r}
+confint(mixed_model_CMA_global1, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+```
+
+##### Multivariable Models CMG
+```{r}
+# Multivariable Models - CMG
 mixed_model_CMG_global <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
                                   data = global_patients_final_no_outliers_CMG, 
                                   family = nbinom1(link = "log"))
@@ -4862,6 +4918,66 @@ mixed_model_CMA_antidiabetics_final_table
 mixed_model_CMA_antihiperlipidemic_final_table
 mixed_model_CMA_global_final_table
 mixed_model_CMA_optimized_models_table
+```
+
+<p>Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function (https://github.com/bbolker/broom.mixed/issues/108) in negative binomial regressions (correctly reported for regression with zero-inflated component). The CI for Random Effects (Intercept) in the previous tables should be ignored. CI for this variable was computed using glmmTMB::confint() function using Wald method as visible below.</p>
+
+```{r}
+confint(mixed_model_CMA_anticoagulants, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_anticoagulants3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antidiabetics, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antidiabetics3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antihiperlipidemic, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antihiperlipidemic2, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_global, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_global1, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
 ```
 
 ### Continuous Multiple Interval Measure of Medication Gaps (CMG)

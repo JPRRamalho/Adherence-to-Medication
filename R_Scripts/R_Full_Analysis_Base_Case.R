@@ -1,24 +1,10 @@
-#' ---
-#' title: "Abem Program | Adhesion to Medication <br> Research Report"
-#' author: José Ramalho^[National School of Public Health - UNL, jpr.ramalho@ensp.unl.pt]
-#' date: "`r format(Sys.time(), '%d %B, %Y')`" 
-#' output:
-#'   rmdformats::readthedown:
-#'     use_bookdown: TRUE
-#'     highlight: pygments
-#'     toc_depth: 6
-#'     code_folding: show
-#'     lightbox: TRUE
-#'     gallery: TRUE
-#' ---
-#' 
 ## h1 {
 
 ##   text-align: center;
 
 ## }
 
-#' 
+
 ##     #content{
 
 ##         max-width:100%;
@@ -27,18 +13,17 @@
 
 ##     /* Adjust html width */
 
-#' 
-## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- include=FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
-#' 
-## ---- include=FALSE------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- include=FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
 # Working Directory Setting
 setwd("./")
 
-#' 
-#' # Datasets Import and Merge
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(readr)
 library(janitor)
 library(data.table)
@@ -49,7 +34,7 @@ library(tidyr)
 
 # Files need to previously be saved as CSV files
 # Import and special character cleanse 
-BD_Consumos_abem_2016_2020 <- read_delim("./DataBases/BD_Consumos_abem_2016-2020.csv", 
+BD_Consumos_abem_2016_2020 <- read_delim("../DataBases/BD_Consumos_abem_2016-2020.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Cod_Receita = col_character(), 
         `Valor_ABEM (euros)` = col_double(), 
@@ -61,12 +46,12 @@ BD_Consumos_abem_2016_2020 <- read_delim("./DataBases/BD_Consumos_abem_2016-2020
 BD_Consumos_abem_2016_2020 <- clean_names(BD_Consumos_abem_2016_2020)
 
 
-BD_Consumos_abem_2021 <- read_delim("./DataBases/BD_Consumos_abem_2021.csv", 
+BD_Consumos_abem_2021 <- read_delim("../DataBases/BD_Consumos_abem_2021.csv", 
     ";", quote = "\\\"", escape_double = FALSE, 
     col_types = cols(Data_Dispensa = col_date(format = "%d/%m/%Y"), 
         Benef_Ano_Nascimento = col_date(format = "%Y")), 
     locale = locale(decimal_mark = ","), 
-    na = "empty", trim_ws = TRUE, )
+    na = "empty", trim_ws = TRUE)
 
 BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 
@@ -74,7 +59,7 @@ BD_Consumos_abem_2021 <- clean_names(BD_Consumos_abem_2021)
 BD_Consumos_abem_2016_2021 <- bind_rows(BD_Consumos_abem_2016_2020,BD_Consumos_abem_2021)
 
 
-BD_Beneficiarios_abem_2016_2021 <- read_delim("./DataBases/BD_Beneficiarios_abem_2016-2021.csv", 
+BD_Beneficiarios_abem_2016_2021 <- read_delim("../DataBases/BD_Beneficiarios_abem_2016-2021.csv", 
     ";", col_types = cols(`Ano de Nascimento` = col_date(format = "%Y"), 
         `Data Início` = col_date(format = "%d/%m/%Y"), 
         `Data Fim` = col_date(format = "%d/%m/%Y"), 
@@ -87,7 +72,7 @@ BD_Beneficiarios_abem_2016_2021 <- read_delim("./DataBases/BD_Beneficiarios_abem
 BD_Beneficiarios_abem_2016_2021 <- clean_names(BD_Beneficiarios_abem_2016_2021)
 
 
-Lista_Codigos_ATC_DCI <- read_delim("./DataBases/Lista_Codigos_ATC_DCI.csv", 
+Lista_Codigos_ATC_DCI <- read_delim("../DataBases/Lista_Codigos_ATC_DCI.csv", 
     ";", col_types = cols(`PDDD \n(=DDD OMS/ Dose do medicamento)` = col_double(), 
         `TTD \n(=quantidade que caracteriza a embalagem / PDDD)` = col_double()), 
     locale = locale(decimal_mark = ","), 
@@ -95,17 +80,14 @@ Lista_Codigos_ATC_DCI <- read_delim("./DataBases/Lista_Codigos_ATC_DCI.csv",
 
 Lista_Codigos_ATC_DCI <- clean_names(Lista_Codigos_ATC_DCI)
 
-
-NUTS_II <- read_delim("./DataBases/NUTS II.csv", 
+NUTS_II <- read_delim("../DataBases/NUTS II.csv", 
     ";", quote = "\\\"", escape_backslash = TRUE, 
     col_types = cols(`regiao` = col_character(), 
         municipio = col_character()), locale = locale(), 
     na = "0", comment = "*>", trim_ws = TRUE)
 
-#' 
-#' # Data Wrangling and Data Transformation
-#' ## General
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # New data set for variables: antidepressant usage and mean number of medicines
 BD_Consumos_abem_2016_2021_2 <- BD_Consumos_abem_2016_2021 %>%                  
   group_by(cod_beneficiario, cod_medicamento, data_dispensa) %>%                 
@@ -153,9 +135,8 @@ BD_Beneficiarios_abem_2016_2021 <- BD_Beneficiarios_abem_2016_2021 %>%
                                   fam_type_code == "1_0_0_0_1" ~ 3,
                                   TRUE ~ 4))
 
-#' 
-#' ## Anticoagulants
-## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- warning = FALSE--------------------------------------------------------------------------------------------------------------------------------------------------
 # Anticoagulants ATC codes list
 anticoagulant_atc_codes <- c("B01AA03", "B01AA07", "B01AE07", "B01AF01", "B01AF02", "B01AF03")
 
@@ -530,11 +511,10 @@ anticoagulant_patients_final <- anticoagulant_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(anticoagulant_patients_final, "./Outputs\\Anticoagulants_final.csv", row.names = FALSE)
+write.csv2(anticoagulant_patients_final, "../Outputs\\Anticoagulants_final.csv", row.names = FALSE)
 
-#' 
-#' ## Antidiabetics
-## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- warning = FALSE--------------------------------------------------------------------------------------------------------------------------------------------------
 # Antidiabetics ATC codes list
 antidiabetic_atc_codes <- c("A10BA02", "A10BB01", "A10BB07", "A10BB09", "A10BB12", "A10BD02", "A10BD05", "A10BD06",
                             "A10BD07", "A10BD08", "A10BD09", "A10BD10", "A10BD11", "A10BD13", "A10BD15", "A10BD16",
@@ -910,12 +890,11 @@ antidiabetic_patients_final <- antidiabetic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antidiabetic_patients_final, "./Outputs\\Antidiabetics_final.csv", row.names = FALSE)
+write.csv2(antidiabetic_patients_final, "../Outputs\\Antidiabetics_final.csv", row.names = FALSE)
 
 
-#' 
-#' ## Antihiperlipidemics
-## ---- warning = FALSE----------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- warning = FALSE--------------------------------------------------------------------------------------------------------------------------------------------------
 # Antihiperlipidemics ATC codes list
 antihiperlipidemic_atc_codes <- c("C10AA01", "C10AA02", "C10AA03", "C10AA04", "C10AA05", "C10AA07", "C10AA08", "C10AB02", "C10AB04",
                          "C10AB05", "C10AB08", "C10AC01", "C10AX09", "C10BA02", "C10BA03", "C10BA04", "C10BA05", "C10BA06",
@@ -1289,11 +1268,10 @@ antihiperlipidemic_patients_final <- antihiperlipidemic_patients %>%
   select(patient_id, gender, age_group, nuts_ii, numb_fam_members, family_type, generic_usage, antidepressant_use, pharmacy_loyalty, avrg_fin_sup_week, avrg_numb_drugs_refill, num_days_CMA, CMA, num_days_CMG, CMG, discontinuation, time_to_event)
 
 # CSV file export
-write.csv2(antihiperlipidemic_patients_final, "./Outputs\\Antihiperlipidemics_final.csv", row.names = FALSE)
+write.csv2(antihiperlipidemic_patients_final, "../Outputs\\Antihiperlipidemics_final.csv", row.names = FALSE)
 
-#' 
-#' ## Global
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Merge of data sets
 global_patients_final <- bind_rows(anticoagulant_patients_final, antidiabetic_patients_final, antihiperlipidemic_patients_final)
 
@@ -1335,69 +1313,10 @@ antihiperlipidemic_patients_final_global <- antihiperlipidemic_patients_final %>
 global_patients_final <- bind_rows(anticoagulant_patients_final_global, antidiabetic_patients_final_global, antihiperlipidemic_patients_final_global)
 
 # CSV file export
-write.csv2(global_patients_final, "./Outputs\\Global_final.csv", row.names = FALSE)
+write.csv2(global_patients_final, "../Outputs\\Global_final.csv", row.names = FALSE)
 
-#' 
-#' # Variable Dictionary
-#' 
-#' ## patient_id
-#' Patient ID;
-#' 
-#' ## gender
-#' Sex (Male = 1, Female = 0)
-#' 
-#' ## age_group
-#' Age group at date of last prescription (\<45 = 1; 45-54 = 2; 55-64 = 3; 65-74 = 4; 75-84 = 5; \>85 = 6)
-#' 
-#' ## nuts_ii
-#' Residence - NUT II (Norte = 0; Centro = 1; Área Metropolitana de Lisboa = 2; Alentejo = 3; Algarve = 4; Região Autónoma dos Açores = 5; Região Autónoma da Madeira = 6)
-#' 
-#' ## numb_fam_members
-#' Number of family elements at date of last prescription
-#' 
-#' ## family_type
-#' Type of family (0 = Lone individual; 1 = Couple without children; 2 = Couple with children; 3 = Single parent family; 4 = Multifamily household)
-#' 
-#' ## generic_usage
-#' Usage of generic medication  at date of last prescription (1 = Yes; 0 = No)
-#' 
-#' ## antidepressant_use
-#' Consumption of antidepressant drugs at any point of observation period (1 = Yes; 0 = No)
-#' 
-#' ## pharmacy_loyalty
-#' Prescriptions fulfilled on the same pharmacy (<100% prescriptions fulfilled on same pharmacy = 0; 100% prescriptions filled on same pharmacy = 1)
-#' 
-#' ## avrg_fin_sup_week
-#' Average amount of financial assistance per week during observation period (€/week) - Quintiles (1st quintile = 1; 2nd quintile = 2; 3rd quintile = 3, 4th quintile = 4; 5th quintile = 5)
-#' 
-#' ## avrg_numb_drugs_refill
-#' Average number of different drugs fulfilled by pharmacy visit (less than 5 drugs = 0; polypharmacy (>=5 and <10) = 1; excessive polypharmacy (>=10) = 2)
-#' 
-#' ## num_days_CMA
-#' Number of days covered by medication fulfilled (CMA numerator)
-#' 
-#' ## CMA
-#' CMA Rate - Continuous Multiple Interval Measure of Medication Acquisition (%)
-#' 
-#' ## num_days_CMG
-#' Number of days with medication gaps (CMG numerator)
-#' 
-#' ## CMG
-#' CMG Rate - Continuous Multiple Interval Measure of Medication Gaps (%)
-#' 
-#' ## discontinuation
-#' Discontinuation of analysed medication (1 = Yes; 0 = No)
-#' 
-#' ## time_to_event
-#' Period of observation - from first prescription to end of program/study or discontinuation of analysed medication (days)
-#' 
-#' ## drug_class
-#' Drug class analysed in observation period (anticoagulants; antidiabetics; antihiperlipidemics)
-#' 
-#' # Statistical Analysis
-#' ## Anticoagulants
-#' ### Frequency Tables, Mean, Median, SD
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 library(knitr)
 library(papeR)
 library(kableExtra)
@@ -1415,9 +1334,8 @@ kable(summarize(anticoagulant_patients_final, type = "factor", variables = c("ph
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' ### CMA and CMG Boxplot and Histograms
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(reshape2)
 library(ggplot2)
 
@@ -1453,9 +1371,8 @@ histograma2 <- ggplot(boxplot_data_anticoagulants, aes(x=anticoagulant_patients_
 
 histograma2
 
-#' 
-#' ### Normality tests (Shapiro-Wilk Test of Normality and Kolmogorov-Smirnov Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(broom)
 Shapiro_Wilk_CMA <- shapiro.test(anticoagulant_patients_final$CMA)
 Kolmogorov_Smirnov_CMA <- ks.test(anticoagulant_patients_final$CMA, "pnorm")
@@ -1486,10 +1403,8 @@ kable(tidy(Kolmogorov_Smirnov_CMG), caption = "<b>CMG Kolmogorov-Smirnov Test</b
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' 
-#' ### Bivariate Analysis
-#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(PerformanceAnalytics)
 kable(broom::tidy(t.test(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
@@ -1509,10 +1424,8 @@ kable(broom::tidy(t.test(anticoagulant_patients_final$CMA ~ anticoagulant_patien
 kable(broom::tidy(t.test(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' In the anticoagulant drug class there are no generic drugs so this variable was not analysed.
-#' 
-#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(tidy(aov(anticoagulant_patients_final$CMA ~ anticoagulant_patients_final$age_group)), 
       caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
@@ -1561,10 +1474,8 @@ kable(tidy(aov(anticoagulant_patients_final$CMG ~ anticoagulant_patients_final$a
       caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
-#' 
-#' ### Generalized Linear Mixed Effects Model CMA and CMG
-#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(lme4)
 library(broom.mixed)
 
@@ -1578,10 +1489,8 @@ kable(tidy(mean_CMG_anticoagulants_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMG - Anticoagulants</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' 
-#' #### Equidispersion Test
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(AER)
 
 kable(c(mean(anticoagulant_patients_final$num_days_CMA), var(anticoagulant_patients_final$num_days_CMA)),
@@ -1604,9 +1513,8 @@ remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = anticoagula
    caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
 
-#' 
-#' #### Multi-Collinearity Test
-## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- echo=FALSE, message=FALSE----------------------------------------------------------------------------------------------------------------------------------------
 library(performance)
 library(glmtoolbox)
 
@@ -1626,11 +1534,8 @@ kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_d
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' In the anticoagulant drug class there are no generic drugs so this variable was not analysed.
-#' 
-#' #### GLME Models
-#' ##### Outlier Removal
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 quartiles <- quantile(anticoagulant_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
 IQR <- IQR(anticoagulant_patients_final$CMA)
@@ -1649,9 +1554,8 @@ Upper <- quartiles[2] + 1.5*IQR
  
 anticoagulant_patients_final_no_outliers_CMG <- filter(anticoagulant_patients_final, CMG > Lower & CMG < Upper)
 
-#' 
-#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 kable(summarize(anticoagulant_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), 
       caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
@@ -1680,12 +1584,8 @@ kable(summarize(anticoagulant_patients_final_no_outliers_CMG, type = "factor", v
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' 
-#' ##### Univariable Models
-#' ###### CMA
-#' Negative Binomial regression used due to data overdispersion.
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(glmmTMB)
 library(gtsummary)
 
@@ -1787,9 +1687,8 @@ mixed_model_CMA_anticoagulants_univ_final_table <- tbl_stack(
     mixed_model_CMA_anticoagulants_univ8_table))
 mixed_model_CMA_anticoagulants_univ_final_table
 
-#' 
-#' ###### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMG
 mixed_model_CMG_anticoagulants_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
                                                  data = anticoagulant_patients_final_no_outliers_CMG, 
@@ -1892,12 +1791,9 @@ mixed_model_CMG_anticoagulants_zeroi_univ_final_table <- tbl_stack(
     mixed_model_CMG_anticoagulants_zeroi_univ8_table))
 mixed_model_CMG_anticoagulants_zeroi_univ_final_table
 
-#' 
-#' 
-#' ##### Multivariable Models
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Multivariable Models
-# CMA
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMA
 mixed_model_CMA_anticoagulants <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                           data = anticoagulant_patients_final_no_outliers_CMA, 
                                           family = nbinom1(link = "log"))
@@ -1921,11 +1817,23 @@ kable(tidy(mixed_model_CMA_anticoagulants3, exponentiate = TRUE, conf.int = TRUE
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinm2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinm2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-# CMG
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+confint(mixed_model_CMA_anticoagulants3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMG
 mixed_model_CMG_anticoagulants <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                           data = anticoagulant_patients_final_no_outliers_CMG, 
                                           family = nbinom2(link = "log"))
@@ -1978,10 +1886,8 @@ kable(tidy(mixed_model_CMG_anticoagulants_zeroi2, exponentiate = TRUE, conf.int 
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))     
 
-#' 
-#' #### GLME Models Testing
-#' ##### CMA
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(DHARMa)
 
 #CMA
@@ -1991,9 +1897,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_anticoagulants3)
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_anticoagulants3), alternative = c("two.sided"), plot = F)
 
-#' 
-#' ##### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMG
 simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_zeroi2, plot = T)
 
@@ -2001,15 +1906,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_z
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_anticoagulants_zeroi2), alternative = c("two.sided"), plot = F)
 
-#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
-#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
-#' 
-#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
-#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
-#' 
-#' ## Antidiabetics
-#' ### Frequency Tables, Mean, Median, SD
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 kable(summarize(antidiabetic_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
   row_spec(2:4, bold = T)
@@ -2021,9 +1919,8 @@ kable(summarize(antidiabetic_patients_final, type = "factor", variables = c("pha
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' ### CMA and CMG Boxplot and Histograms
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(reshape2)
 library(ggplot2)
 
@@ -2059,9 +1956,8 @@ histograma4 <- ggplot(boxplot_data_antidiabetics, aes(x=antidiabetic_patients_fi
 
 histograma4
 
-#' 
-#' ### Normality tests (Shapiro-Wilk Test of Normality and Kolmogorov-Smirnov Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Shapiro_Wilk_CMA1 <- shapiro.test(antidiabetic_patients_final$CMA)
 Shapiro_Wilk_CMG1 <- shapiro.test(antidiabetic_patients_final$CMG)
 Kolmogorov_Smirnov_CMA1 <- ks.test(antidiabetic_patients_final$CMA, "pnorm")
@@ -2091,10 +1987,8 @@ kable(tidy(Kolmogorov_Smirnov_CMG1), caption = "<b>CMG Kolmogorov-Smirnov Test</
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' 
-#' ### Bivariate Analysis
-#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(broom::tidy(t.test(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
@@ -2119,9 +2013,8 @@ kable(broom::tidy(t.test(antidiabetic_patients_final$CMA ~ antidiabetic_patients
 kable(broom::tidy(t.test(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(tidy(aov(antidiabetic_patients_final$CMA ~ antidiabetic_patients_final$age_group)), 
       caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
@@ -2170,11 +2063,8 @@ kable(tidy(aov(antidiabetic_patients_final$CMG ~ antidiabetic_patients_final$avr
       caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
-#' 
-#' 
-#' ### Generalized Linear Mixed Effects Model CMA and CMG
-#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 mean_CMA_antidiabetic_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = antidiabetic_patients_final) 
 kable(tidy(mean_CMA_antidiabetic_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMA - Antidiabetics</b>", format = 'html') %>%
@@ -2185,9 +2075,8 @@ kable(tidy(mean_CMG_antidiabetic_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMG - Antidiabetics</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Equidispersion Test
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(c(mean(antidiabetic_patients_final$num_days_CMA), var(antidiabetic_patients_final$num_days_CMA)),
       caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
@@ -2208,9 +2097,8 @@ remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = antidiabeti
    caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
 
-#' 
-#' #### Multi-Collinearity Test
-## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- echo=FALSE, message=FALSE----------------------------------------------------------------------------------------------------------------------------------------
 kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
          data = antidiabetic_patients_final, family = "poisson"), verbose = FALSE),
       caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
@@ -2227,10 +2115,8 @@ kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_d
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' 
-#' #### GLME Models
-#' ##### Outlier Removal
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 quartiles <- quantile(antidiabetic_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
 IQR <- IQR(antidiabetic_patients_final$CMA)
@@ -2249,9 +2135,8 @@ Upper <- quartiles[2] + 1.5*IQR
  
 antidiabetic_patients_final_no_outliers_CMG <- filter(antidiabetic_patients_final, CMG > Lower & CMG < Upper)
 
-#' 
-#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 kable(summarize(antidiabetic_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
@@ -2276,11 +2161,8 @@ kable(summarize(antidiabetic_patients_final_no_outliers_CMG, type = "factor", va
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' ##### Univariable Models
-#' ###### CMA
-#' Negative Binomial regression used due to data overdispersion.
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Univariable Models
 # CMA
 mixed_model_CMA_antidiabetics_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
@@ -2387,9 +2269,8 @@ mixed_model_CMA_antidiabetics_univ_final_table <- tbl_stack(
     mixed_model_CMA_antidiabetics_univ9_table))
 mixed_model_CMA_antidiabetics_univ_final_table
 
-#' 
-#' ###### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMG
 mixed_model_CMG_antidiabetics_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
                                                  data = antidiabetic_patients_final_no_outliers_CMG, 
@@ -2504,12 +2385,9 @@ mixed_model_CMG_antidiabetics_zeroi_univ_final_table <- tbl_stack(
     mixed_model_CMG_antidiabetics_zeroi_univ9_table))
 mixed_model_CMG_antidiabetics_zeroi_univ_final_table
 
-#' 
-#' 
-#' ##### Multivariable Models
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Multivariable Models
-# CMA
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMA
 mixed_model_CMA_antidiabetics <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                          data = antidiabetic_patients_final_no_outliers_CMA, 
                                          family = nbinom1(link = "log"))
@@ -2534,11 +2412,23 @@ kable(tidy(mixed_model_CMA_antidiabetics3, exponentiate = TRUE, conf.int = TRUE)
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC).
-             Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+             Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-# CMG
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+confint(mixed_model_CMA_antidiabetics3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMG
 mixed_model_CMG_antidiabetics <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                          data = antidiabetic_patients_final_no_outliers_CMG, 
                                          family = nbinom1(link = "log"))
@@ -2592,10 +2482,8 @@ kable(tidy(mixed_model_CMG_antidiabetics_zeroi2, exponentiate = TRUE, conf.int =
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))              
 
-#' 
-#' #### GLME Models Testing
-#' ##### CMA
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMA
 simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3, plot = T) 
 
@@ -2603,9 +2491,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3),
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_antidiabetics3), alternative = c("two.sided"), plot = F)
 
-#' 
-#' ##### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMG
 simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_zeroi2, plot = T)
 
@@ -2613,15 +2500,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_ze
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_antidiabetics_zeroi2), alternative = c("two.sided"), plot = F)
 
-#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
-#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
-#' 
-#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
-#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
-#' 
-#' ## Antihiperlipidemics
-#' ### Frequency Tables, Mean, Median, SD
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 kable(summarize(antihiperlipidemic_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
   row_spec(2:4, bold = T)
@@ -2633,9 +2513,8 @@ kable(summarize(antihiperlipidemic_patients_final, type = "factor", variables = 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px")
 
-#' 
-#' ### CMA and CMG Boxplot and Histograms
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(reshape2)
 library(ggplot2)
 
@@ -2671,9 +2550,8 @@ histograma6 <- ggplot(boxplot_data_antidiabetics, aes(x=antidiabetic_patients_fi
 
 histograma6
 
-#' 
-#' ### Normality tests (Kolmogorov-Smirnov Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Kolmogorov_Smirnov_CMA2 <- ks.test(antihiperlipidemic_patients_final$CMA, "pnorm")
 Kolmogorov_Smirnov_CMG2 <- ks.test(antihiperlipidemic_patients_final$CMG, "pnorm")
 
@@ -2689,12 +2567,8 @@ kable(tidy(Kolmogorov_Smirnov_CMG2), caption = "<b>CMG Kolmogorov-Smirnov Test</
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' Since n > 5000 Shapiro-Wilk normality test was not used.
-#' 
-#' 
-#' ### Bivariate Analysis
-#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
@@ -2719,9 +2593,8 @@ kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMA ~ antihiperlipide
 kable(broom::tidy(t.test(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(tidy(aov(antihiperlipidemic_patients_final$CMA ~ antihiperlipidemic_patients_final$age_group)), 
       caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
@@ -2770,10 +2643,8 @@ kable(tidy(aov(antihiperlipidemic_patients_final$CMG ~ antihiperlipidemic_patien
       caption = "<b>One-Way ANOVA - CMG/Average Number of Drugs per Visit</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
-#' 
-#' ### Generalized Linear Mixed Effects Model CMA and CMG
-#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 mean_CMA_antihiperlipidemic_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = antihiperlipidemic_patients_final) 
 kable(tidy(mean_CMA_antihiperlipidemic_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMA - Antihiperlipidemics</b>", format = 'html') %>%
@@ -2784,9 +2655,8 @@ kable(tidy(mean_CMG_antihiperlipidemic_random, effects = "fixed", conf.int = TRU
       caption = "<b>Mean CMG - Antihiperlipidemics</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Equidispersion Test
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(c(mean(antihiperlipidemic_patients_final$num_days_CMA), var(antihiperlipidemic_patients_final$num_days_CMA)),
       caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
@@ -2807,10 +2677,8 @@ remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = antihiperli
    caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
 
-#' 
-#' 
-#' #### Multi-Collinearity Test
-## ---- echo=FALSE, message=FALSE------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- echo=FALSE, message=FALSE----------------------------------------------------------------------------------------------------------------------------------------
 kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + offset(log(time_to_event)), 
          data = antihiperlipidemic_patients_final, family = "poisson"), verbose = FALSE),
       caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
@@ -2827,10 +2695,8 @@ kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_d
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' 
-#' #### GLME Models
-#' ##### Outlier Removal
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 quartiles <- quantile(antihiperlipidemic_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
 IQR <- IQR(antihiperlipidemic_patients_final$CMA)
@@ -2849,9 +2715,8 @@ Upper <- quartiles[2] + 1.5*IQR
  
 antihiperlipidemic_patients_final_no_outliers_CMG <- filter(antihiperlipidemic_patients_final, CMG > Lower & CMG < Upper)
 
-#' 
-#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
@@ -2876,11 +2741,8 @@ kable(summarize(antihiperlipidemic_patients_final_no_outliers_CMG, type = "facto
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px")
 
-#' 
-#' ##### Univariable Models
-#' ###### CMA
-#' Negative Binomial regression used due to data overdispersion.
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Univariable Models
 # CMA
 mixed_model_CMA_antihiperlipidemics_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
@@ -2987,9 +2849,8 @@ mixed_model_CMA_antihiperlipidemics_univ_final_table <- tbl_stack(
     mixed_model_CMA_antihiperlipidemics_univ9_table))
 mixed_model_CMA_antihiperlipidemics_univ_final_table
 
-#' 
-#' ###### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMG
 mixed_model_CMG_antihiperlipidemics_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
                                                  data = antihiperlipidemic_patients_final_no_outliers_CMG, 
@@ -3103,12 +2964,9 @@ mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table <- tbl_stack(
     mixed_model_CMG_antihiperlipidemics_zeroi_univ9_table))
 mixed_model_CMG_antihiperlipidemics_zeroi_univ_final_table
 
-#' 
-#' 
-#' ##### Multivariable Models
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Multivariable Models
-# CMA
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMA
 mixed_model_CMA_antihiperlipidemic <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                               data = antihiperlipidemic_patients_final_no_outliers_CMA, 
                                               family = nbinom1(link = "log"))
@@ -3128,11 +2986,23 @@ kable(tidy(mixed_model_CMA_antihiperlipidemic2, exponentiate = TRUE, conf.int = 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))        
 
-# CMG
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+confint(mixed_model_CMA_antihiperlipidemic2, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMG
 mixed_model_CMG_antihiperlipidemic <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + offset(log(time_to_event)) + (1 | patient_id), 
                                               data = antihiperlipidemic_patients_final_no_outliers_CMG, 
                                               family = nbinom1(link = "log"))
@@ -3190,10 +3060,8 @@ kable(tidy(mixed_model_CMG_antihiperlipidemic_zeroi3, exponentiate = TRUE, conf.
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-#' 
-#' #### GLME Models Testing
-#' ##### CMA
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMA
 simulateResiduals(fittedModel = mixed_model_CMA_antihiperlipidemic2, plot = T)
 
@@ -3201,9 +3069,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_antihiperlipidem
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_antihiperlipidemic2), alternative = c("two.sided"), plot = F)
 
-#' 
-#' ##### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMG
 simulateResiduals(fittedModel = mixed_model_CMG_antihiperlipidemic_zeroi3, plot = T)
 
@@ -3211,15 +3078,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_antihiperlipidem
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_antihiperlipidemic_zeroi3), alternative = c("two.sided"), plot = F)
 
-#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
-#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
-#' 
-#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
-#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
-#' 
-#' ## Global
-#' ### Frequency Tables, Mean, Median, SD
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 kable(summarize(global_patients_final, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
   row_spec(2:4, bold = T)
@@ -3231,9 +3091,8 @@ kable(summarize(global_patients_final, type = "factor", variables = c("pharmacy_
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' ### CMA and CMG Boxplot and Histograms
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(reshape2)
 library(ggplot2)
 
@@ -3269,9 +3128,8 @@ histograma8 <- ggplot(boxplot_data_global, aes(x=global_patients_final.CMG))+
 
 histograma8
 
-#' 
-#' ### Normality tests (Kolmogorov-Smirnov Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Kolmogorov_Smirnov_CMA3 <- ks.test(global_patients_final$CMA, "pnorm")
 Kolmogorov_Smirnov_CMG3 <- ks.test(global_patients_final$CMG, "pnorm")
 
@@ -3287,12 +3145,8 @@ kable(tidy(Kolmogorov_Smirnov_CMG3), caption = "<b>CMG Kolmogorov-Smirnov Test</
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline")) 
 
-#' Since n > 5000 Shapiro-Wilk normality test was not used.
-#' 
-#' 
-#' ### Bivariate Analysis
-#' #### Bivariate Analysis - Categorical Variables - Two level (Two-Sample t-Test)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$gender, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMA/Gender</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
@@ -3317,9 +3171,8 @@ kable(broom::tidy(t.test(global_patients_final$CMA ~ global_patients_final$pharm
 kable(broom::tidy(t.test(global_patients_final$CMG ~ global_patients_final$pharmacy_loyalty, mu = 0, alt. = "two.sided", conf = 0.95, var.eq = F, paired = F)), caption = "<b>Two-Sample t-Test - CMG/Pharmacy Loyalty</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Bivariate Analysis - Categorical Variables - Three or more levels (One-Way ANOVA)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(tidy(aov(global_patients_final$CMA ~ global_patients_final$age_group)), 
       caption = "<b>One-Way ANOVA - CMA/Age Group</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
@@ -3376,10 +3229,8 @@ kable(tidy(aov(global_patients_final$CMG ~ global_patients_final$drug_class)),
       caption = "<b>One-Way ANOVA - CMG/Drug Class</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) 
 
-#' 
-#' ### Generalized Linear Mixed Effects Model CMA and CMG
-#' #### Mean CMA and CMG after adjustment for random effects (patient_id) 
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 mean_CMA_global_random <- lme4::lmer(CMA ~ 1 + (1 | patient_id), data = global_patients_final) 
 kable(tidy(mean_CMA_global_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMA - Overall</b>", format = 'html') %>%
@@ -3390,9 +3241,8 @@ kable(tidy(mean_CMG_global_random, effects = "fixed", conf.int = TRUE),
       caption = "<b>Mean CMG - Overall</b>", format = 'html') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE)
 
-#' 
-#' #### Equidispersion Test
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 kable(c(mean(global_patients_final$num_days_CMA), var(global_patients_final$num_days_CMA)),
       caption = "<b>CMA - Mean/Variance</b>", format = 'html', col.names = c("Value")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
@@ -3413,9 +3263,8 @@ remove_column(kable(tidy(dispersiontest(glm(num_days_CMG ~ 1, data = global_pati
    caption = "<b>CMG - Overdispersion Test</b>", format = 'html') %>%
    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE),5)
 
-#' 
-#' #### Multi-Collinearity Test
-## ---- echo=FALSE, message=FALSE, results='hide'--------------------------------------------------------------------------------------------------------------------------
+
+## ---- echo=FALSE, message=FALSE, results='hide'------------------------------------------------------------------------------------------------------------------------
 kable(gvif(glm(num_days_CMA ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_drugs_refill + gender + age_group + nuts_ii + numb_fam_members + family_type + antidepressant_use + drug_class + offset(log(time_to_event)), 
          data = global_patients_final, family = "poisson"), verbose = FALSE),
       caption = "<b>CMA - Collinearity Test (GVIF)</b>", format = 'html') %>%
@@ -3432,10 +3281,8 @@ kable(gvif(glm(num_days_CMG ~ pharmacy_loyalty + avrg_fin_sup_week + avrg_numb_d
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-#' 
-#' #### GLME Models
-#' ##### Outlier Removal
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 quartiles <- quantile(global_patients_final$CMA, probs=c(.25, .75), na.rm = FALSE)
 IQR <- IQR(global_patients_final$CMA)
@@ -3454,9 +3301,8 @@ Upper <- quartiles[2] + 1.5*IQR
  
 global_patients_final_no_outliers_CMG <- filter(global_patients_final, CMG > Lower & CMG < Upper)
 
-#' 
-#' ##### Frequency Tables, Mean, Median, SD after Outlier Removal
-## ---- results = 'asis'---------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ---- results = 'asis'-------------------------------------------------------------------------------------------------------------------------------------------------
 # CMA
 kable(summarize(global_patients_final_no_outliers_CMA, type = "numeric", variables = c("numb_fam_members", "CMA", "CMG", "time_to_event")), caption = "<b>Continuous Variables - CMA</b>", format = 'html') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = TRUE) %>% 
@@ -3481,11 +3327,8 @@ kable(summarize(global_patients_final_no_outliers_CMG, type = "factor", variable
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") 
 
-#' 
-#' ##### Univariable Models
-#' ###### CMA
-#' Negative Binomial regression used due to data overdispersion.
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Univariable Models
 # CMA
 mixed_model_CMA_global_univ1 <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
@@ -3603,9 +3446,8 @@ mixed_model_CMA_global_univ_final_table <- tbl_stack(
     mixed_model_CMA_global_univ10_table))
 mixed_model_CMA_global_univ_final_table
 
-#' 
-#' ###### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMG
 mixed_model_CMG_global_zeroi_univ1 <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + offset(log(time_to_event)) + (1 | patient_id), 
                                                  data = global_patients_final_no_outliers_CMG, 
@@ -3732,12 +3574,9 @@ mixed_model_CMG_global_zeroi_univ_final_table <- tbl_stack(
     mixed_model_CMG_global_zeroi_univ10_table))
 mixed_model_CMG_global_zeroi_univ_final_table
 
-#' 
-#' 
-#' ##### Multivariable Models
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Multivariable Models
-# CMA
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMA
 mixed_model_CMA_global <- glmmTMB(num_days_CMA ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
                                   data = global_patients_final_no_outliers_CMA, 
                                   family = nbinom1(link = "log"))
@@ -3753,11 +3592,23 @@ kable(tidy(mixed_model_CMA_global1, exponentiate = TRUE, conf.int = TRUE),
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = NULL), fixed_thead = TRUE) %>% 
   scroll_box(height = "600px") %>% 
   footnote(general = " Model optimization through backward stepwise selection. Criteria: Sex and Age Group variables always included in the model, p-value < 0.2 and decreasing Akaike information criterion (AIC). 
-           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).",
+           Nbinom1 (linear parameterization) used since Akaike Information Criterion (AIC) was superior when compared with nbinom2 (quadratic parameterization).
+           Confidence intervals for random effects parameters are not being correctly reported by tidy.glmmTMB() function in negative binomial regressions (correctly reported for regression with zero-inflated component). Therefore they should be ignored in this table.",
            general_title = "Observations:",        
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-# CMG
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+confint(mixed_model_CMA_global1, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Multivariable Models - CMG
 mixed_model_CMG_global <- glmmTMB(num_days_CMG ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + offset(log(time_to_event)) + (1 | patient_id), 
                                   data = global_patients_final_no_outliers_CMG, 
                                   family = nbinom1(link = "log"))
@@ -3805,10 +3656,8 @@ kable(tidy(mixed_model_CMG_global_zeroi1, exponentiate = TRUE, conf.int = TRUE),
            general_title = "Observations:",
            footnote_as_chunk = T, title_format = c("italic", "underline"))
 
-#' 
-#' #### GLME Models Testing
-#' ##### CMA
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMA
 simulateResiduals(fittedModel =  mixed_model_CMA_global1, plot = T)
 
@@ -3816,9 +3665,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMA_global1), plot= 
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMA_global1), alternative = c("two.sided"), plot = F)
 
-#' 
-#' ##### CMG
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CMG
 simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1, plot = T)
 
@@ -3826,15 +3674,8 @@ testDispersion(simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1), 
 
 testUniformity(simulateResiduals(fittedModel =  mixed_model_CMG_global_zeroi1), alternative = c("two.sided"), plot = F)
 
-#' <p>Tests show underdispersion in CMG model, "which means that residual variance is smaller than expected under the fitted model" (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#interpreting-residuals-and-recognizing-misspecification-problems). Although we were able to correct underdispersion in the CMA model by removing outliers the same process didn't solve underdispersion in the CMG Model. We refrained from more data selection since: "The test statistics is biased to lower values under quite general conditions, and will therefore tend to test significant for underdispersion." (https://rdrr.io/cran/DHARMa/man/testDispersion.html) "From a technical side, underdispersion is not as concerning as overdispersion, as it will usually bias p-values to the conservative side" (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), GLMMs for count data shows significant deviation according to DHARMa diagnostics qqplot, URL (version: 2022-08-30): https://stats.stackexchange.com/q/587203). 
-#' "Therefore p-values are large and and CI wide which means that we loose power." (https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html#general-remarks-on-interperting-residual-patterns-and-tests).</p>
-#' 
-#' <p>"There are a number of slight, but significant deviations visible. The significance as such is not the concern, as any (inevitably present) model error will result in significant residual patterns given your sample size." (n=3526) (Florian Hartig (https://stats.stackexchange.com/users/48591/florian-hartig), Interpretation of DHARMa residuals for Gamma GLMM, URL (version: 2021-06-28): https://stats.stackexchange.com/q/532507)</p>
-#' <p>Though in the CMG model the significant deviation may be due to large sample size as suggested by the author of DHARMa package, in the CMA model this deviation seems more pronounced. We were unnable to adress this question throught the use of other distributions (gamma, beta and generalized poisson), with the negative binomial model yielding the best results.</p>
-#' 
-#' ## Survival Analysis
-#' ### Kaplan-Meier curves and Log-rank/Mantel-Haenszel test 
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(survival)
 library(ggfortify)
 library(survminer)
@@ -3902,11 +3743,8 @@ km_drugs
 # Log-rank or Mantel-Haenszel Test
 survdiff(Surv(time_to_event, discontinuation) ~ drug_class, data=global_patients_final)
 
-#' 
-#' ### Mixed Effects Cox Regression
-#' #### Mixed Effects Cox Regression Models
-#' ##### Anticoagulants
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(coxme)
 library(gtsummary)
 
@@ -4009,10 +3847,8 @@ anticoagulants_cox_model_univ_table_final
 anticoagulants_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) +  as.factor(family_type) + as.factor(antidepressant_use) + (1 | patient_id), 
                                   data = anticoagulant_patients_final) 
 
-#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
-#' 
-#' ##### Antidiabetics
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Antidiabetics
 # Univariable Models
 antidiabetics_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
@@ -4123,10 +3959,8 @@ antidiabetics_cox_model_univ_table_final
 antidiabetics_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id), 
                                   data = antidiabetic_patients_final) 
 
-#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
-#' 
-#' ##### Antihiperlipidemics
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Antihiperlipidemics
 # Univariable Models
 antihiperlipidemics_cox_model_univ1 <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(gender) + (1 | patient_id), 
@@ -4237,10 +4071,8 @@ antihiperlipidemics_cox_model_univ_table_final
 antihiperlipidemics_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + (1 | patient_id), 
                                   data = antihiperlipidemic_patients_final) 
 
-#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
-#' 
-#' ##### Global
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Global
 # Univariable Models
 global_patients_final$discontinuation <- as.numeric(as.character(global_patients_final$discontinuation))
@@ -4364,47 +4196,36 @@ global_cox_model_univ_table_final
 global_cox_model <- coxme(Surv(time_to_event, discontinuation) ~ as.factor(pharmacy_loyalty) + as.factor(avrg_fin_sup_week) + as.factor(avrg_numb_drugs_refill) + as.factor(gender) + as.factor(age_group) + as.factor(nuts_ii) + as.factor(family_type) + as.factor(generic_usage) + as.factor(antidepressant_use) + as.factor(drug_class) + (1 | patient_id), 
                                   data = global_patients_final) 
 
-#' Model optimization through backward stepwise selection. Criteria: p-value < 0.2 and decreasing Akaike information criterion (AIC).
-#' 
-#' #### Mixed Effects Cox Regression Model Testing (Schoenfeld residuals)
-#' ##### Anticoagulants
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Anticoagulants
 cox.zph(anticoagulants_cox_model)
 
 ggcoxzph(cox.zph(anticoagulants_cox_model), caption = "Anticoagulants Model")
 
-#' 
-#' ##### Antidiabetics
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Antidiabetics
 cox.zph(antidiabetics_cox_model)
 
 ggcoxzph(cox.zph(antidiabetics_cox_model), caption = "Antidiabetics Model")
 
-#' 
-#' ##### Antihiperlipidemics
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Antihiperlipidemics
 cox.zph(antihiperlipidemics_cox_model)
 
 ggcoxzph(cox.zph(antihiperlipidemics_cox_model), caption = "Antihiperlipidemics Model")
 
-#' 
-#' ##### Global
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Global
 cox.zph(global_cox_model)
 
 ggcoxzph(cox.zph(global_cox_model), caption = "Global Model")
 
-#' <p>Schoenfeld residuals tested for selected mixed effects models.</p> 
-#' <p>Though some variables in some models were significant for Schoenfeld residuals test, we decided to keep them in the model without any transformation or time dependency due to large sample size which tends to show statistically "significant" deviation and residuals plot graphical evaluations which don't show any deviation from constant hazards over time.</p>
-#' <p> See: EdM (https://stats.stackexchange.com/users/28500/edm), Violated non-proportional hazards - Cox regression model of time-dependent covariable, URL (version: 2020-12-07): https://stats.stackexchange.com/q/499752 </p>
-#' 
-#' ## Main Results - Tables and Graphs
-#' ### Continuous Multiple Interval Measure of Medication Acquisition (CMA)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(gt)
 library(broom.helpers)
 
@@ -4867,9 +4688,66 @@ mixed_model_CMA_antihiperlipidemic_final_table
 mixed_model_CMA_global_final_table
 mixed_model_CMA_optimized_models_table
 
-#' 
-#' ### Continuous Multiple Interval Measure of Medication Gaps (CMG)
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+confint(mixed_model_CMA_anticoagulants, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_anticoagulants3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antidiabetics, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antidiabetics3, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antihiperlipidemic, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_antihiperlipidemic2, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_global, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+confint(mixed_model_CMA_global1, 
+        parm="sigma",
+        level = 0.95,
+        method = c("Wald"),
+        component = c("cond"),
+        estimate = TRUE)
+
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CMG
 # Means
 kable(tidy(mean_CMG_anticoagulants_random, effects = "fixed", conf.int = TRUE),
@@ -5503,9 +5381,8 @@ mixed_model_CMG_antihiperlipidemic_zeroi_final_table
 mixed_model_CMG_global_zeroi_final_table
 mixed_model_CMG_optimized_models_table
 
-#' 
-#' ### Survival Analysis
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Survival Tables
 surv_table1 <-
   survfit(Surv(time_to_event, discontinuation) ~ 1, data=global_patients_final) %>%
@@ -5930,9 +5807,8 @@ antihiperlipidemics_cox_model_final_table
 global_cox_model_final_table
 cox_optimized_models_table
 
-#' 
-#' # Package References
-## ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 library(report)
 cite_packages()
 
